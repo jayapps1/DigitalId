@@ -1,0 +1,46 @@
+{% extends "main.html" %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Back Button -->
+    <div class="mb-3">
+        <a href="{% url 'digital_id:notifications' %}" 
+           class="btn btn-outline-dark shadow-sm"
+           style="border-color: var(--fire-red); color: var(--fire-red);">
+            ← Back to Notifications
+        </a>
+    </div>
+
+    <!-- Page Title -->
+    <h4 class="mb-4" style="color: var(--fire-red);">Notification Details</h4>
+
+    <!-- Notification Card -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+
+            <!-- Notification Title -->
+            <h5 class="card-title" style="color: var(--fire-red);">{{ note.title }}</h5>
+
+            <!-- Notification Message -->
+            <p class="card-text">{{ note.message }}</p>
+
+            <!-- Timestamp -->
+            <small class="text-muted">{{ note.created_at|naturaltime }}</small>
+
+            <!-- Optional Link -->
+            {% if note.link %}
+                <div class="mt-3">
+                    <a href="{{ note.link }}" target="_blank" 
+                       class="btn btn-sm" 
+                       style="background-color: var(--fire-red); color: #fff;">
+                        Go to link
+                    </a>
+                </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "main.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <h4>Officer Search</h4>
+
+  {% if query %}
+    <p class="text-muted">
+      Results for "<strong>{{ query }}</strong>"
+    </p>
+  {% endif %}
+
+  {% if results %}
+    <div class="list-group">
+
+      {% for u in results %}
+        <a
+          href="{% url 'officers_dash:admin_officer_detail' u.staffid %}"
+          class="list-group-item list-group-item-action"
+        >
+          <strong>{{ u.firstname }} {{ u.lastname }}</strong><br>
+          <small>
+            Staff ID: {{ u.staffid }} |
+            Service No: {{ u.service_number|default:"—" }} |
+            GH Card: {{ u.ghcard|default:"—" }}
+          </small>
+        </a>
+      {% endfor %}
+
+    </div>
+  {% else %}
+    <div class="alert alert-warning mt-3">
+      No matching records found.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

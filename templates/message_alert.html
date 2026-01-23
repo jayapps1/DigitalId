@@ -1,0 +1,13 @@
+{% if messages %}
+<div class="messages-container">
+    {% for message in messages %}
+        <div class="alert alert-success alert-message" role="alert" style="position: relative;">
+            {{ message }}
+            <button type="button" class="close-btn" onclick="this.parentElement.style.display='none'" 
+                    style="position: absolute; right: 10px; top: 5px; border: none; background: none; font-size: 16px; cursor: pointer;">
+                &times;
+            </button>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}

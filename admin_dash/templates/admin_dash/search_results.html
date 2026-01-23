@@ -1,0 +1,143 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Back Button -->
+  <a href="{% url 'admin_dash:home' %}" class="btn gnfs-btn-back mb-3">
+    ← Back to Home
+  </a>
+
+  <!-- Officer Card -->
+  <div class="card gnfs-card shadow-sm">
+    <div class="row g-0">
+
+      <!-- Officer Photo -->
+      <div class="col-md-4 text-center p-3" style="background-color: #8BC0A9;">
+        {% if officer.photo %}
+          <img src="{{ officer.photo.url }}" class="img-fluid rounded-circle gnfs-photo" alt="{{ officer.firstname }}">
+        {% else %}
+          <img src="{% static 'images/default_user.png' %}" class="img-fluid rounded-circle gnfs-photo" alt="Default Photo">
+        {% endif %}
+      </div>
+
+      <!-- Officer Info -->
+      <div class="col-md-8">
+        <div class="card-body">
+          <h4 class="card-title gnfs-text">{{ officer.firstname }} {{ officer.lastname }}</h4>
+          <h6 class="card-subtitle mb-2 gnfs-subtext">{{ officer.rank }}</h6>
+          
+          <ul class="list-group list-group-flush gnfs-list mt-3">
+            <li class="list-group-item"><strong>Staff ID:</strong> {{ officer.staffid}}</li>
+            <li class="list-group-item"><strong>Service Number:</strong> {{ officer.service_number|default:"—" }}</li>
+            <li class="list-group-item"><strong>GH Card:</strong> {{ officer.ghcard|default:"—" }}</li>
+            <li class="list-group-item"><strong>Email:</strong> {{ officer.email|default:"—" }}</li>
+            <li class="list-group-item"><strong>Phone:</strong> {{ officer.phone|default:"—" }}</li>
+            <li class="list-group-item"><strong>Region:</strong> {{ officer.region }}</li>
+            <li class="list-group-item"><strong>District:</strong> {{ officer.district }}</li>
+            <li class="list-group-item"><strong>Role:</strong> {{ officer.get_role_display }}</li>
+            <li class="list-group-item"><strong>Date Joined:</strong> {{ officer.date_joined|date:"M d, Y" }}</li>
+            <li class="list-group-item"><strong>Status:</strong> {{ officer.is_active|yesno:"Active,Inactive" }}</li>
+          </ul>
+
+          <!-- QR & Service ID -->
+          {% if officer.profile %}
+          <div class="row mt-3">
+            <div class="col-6 text-center">
+              {% if officer.profile.qr_image %}
+                <img src="{{ officer.profile.qr_image.url }}" class="img-fluid gnfs-qr" alt="QR Code">
+              {% endif %}
+              <p class="gnfs-subtext mt-1">QR Code</p>
+            </div>
+            <div class="col-6 text-center">
+              {% if officer.profile.service_id_image %}
+                <img src="{{ officer.profile.service_id_image.url }}" class="img-fluid gnfs-service-id" alt="Service ID">
+              {% endif %}
+              <p class="gnfs-subtext mt-1">Service ID</p>
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<style>
+/* GNFS Brand Buttons */
+.gnfs-btn-back {
+  background-color: #D71920; /* Fire Red */
+  color: #FFFFFF;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+.gnfs-btn-back:hover {
+  transform: translateX(-5px);
+  background-color: #B51518;
+  text-decoration: none;
+}
+
+/* Officer Card */
+.gnfs-card {
+  border-radius: 12px;
+  border: 1px solid #FDBB30; /* Safety Gold border */
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.gnfs-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+/* Photo Styling */
+.gnfs-photo {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border: 3px solid #D71920; /* Fire Red */
+}
+
+/* Titles */
+.gnfs-text {
+  color: #D71920; /* Fire Red */
+  font-weight: 700;
+}
+.gnfs-subtext {
+  color: #FDBB30; /* Safety Gold */
+  font-weight: 500;
+}
+
+/* Info List */
+.gnfs-list .list-group-item {
+  border: none;
+  padding-left: 0;
+  padding-right: 0;
+  font-size: 0.95rem;
+  color: #2E2E2E; /* Charcoal Black */
+}
+
+/* QR & Service ID */
+.gnfs-qr, .gnfs-service-id {
+  width: 120px;
+  height: 120px;
+  border: 2px solid #D71920; /* Fire Red */
+  border-radius: 8px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .gnfs-photo {
+    width: 120px;
+    height: 120px;
+  }
+  .gnfs-qr, .gnfs-service-id {
+    width: 100px;
+    height: 100px;
+  }
+}
+</style>
+{% endblock %}

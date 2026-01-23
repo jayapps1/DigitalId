@@ -1,0 +1,141 @@
+{% extends "main.html" %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow" style="width: 400px; border-radius: 10px;">
+        <div class="card-header text-center" style="background-color:#FDBB30; color:#2E2E2E;">
+            <h3>Enter OTP</h3>
+        </div>
+        <div class="card-body" style="background-color:#FFFFFF;">
+            <form method="post" id="otp-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <!-- OTP Input Cells -->
+                <div class="d-flex justify-content-between mb-3 otp-inputs">
+                    {% for i in "123456" %}
+                        <input type="text" maxlength="1" class="otp-cell form-control text-center" required>
+                    {% endfor %}
+                </div>
+
+                <!-- Hidden field to combine all OTP digits -->
+                {{ form.otp }}
+
+                <!-- Timer -->
+                <div class="mb-3 text-center">
+                    <small style="color:#D71920;">
+                        Time remaining: <span id="otp-timer">05:00</span>
+                    </small>
+                </div>
+
+                <button type="submit" class="btn w-100" style="background-color:#D71920; color:#FFFFFF;">
+                    Verify OTP
+                </button>
+            </form>
+
+            <div class="text-center mt-3">
+                <button id="resend-otp-btn" class="btn btn-outline-primary" style="display:none;">
+                    Resend OTP
+                </button>
+            </div>
+        </div>
+        <div class="card-footer text-center" style="background-color:#8BC0A9; color:#2E2E2E;">
+            <small>GNFS System Access Portal</small>
+        </div>
+    </div>
+</div>
+
+<style>
+.otp-inputs .otp-cell {
+    width: 50px;
+    height: 55px;
+    font-size: 1.5rem;
+    text-align: center;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.otp-inputs .otp-cell:focus {
+    border-color: #FDBB30;
+    box-shadow: 0 0 8px rgba(253, 187, 48, 0.5);
+}
+</style>
+
+<script>
+// Auto-focus next input and handle backspace
+const otpCells = document.querySelectorAll('.otp-cell');
+otpCells.forEach((cell, idx) => {
+    cell.addEventListener('input', () => {
+        if (cell.value.length === 1 && idx < otpCells.length - 1) {
+            otpCells[idx + 1].focus();
+        }
+    });
+    cell.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !cell.value && idx > 0) {
+            otpCells[idx - 1].focus();
+        }
+    });
+});
+
+// Combine OTP cells into hidden input before submit
+document.getElementById('otp-form').addEventListener('submit', function(e) {
+    const hiddenInput = document.querySelector('input[name="{{ form.otp.name }}"]');
+    hiddenInput.value = Array.from(otpCells).map(c => c.value).join('');
+});
+
+// Countdown timer
+const otpExpiryMinutes = 5;
+const timerDisplay = document.getElementById("otp-timer");
+const resendBtn = document.getElementById("resend-otp-btn");
+let otpTimerInterval;
+
+function startOtpTimer(durationMinutes) {
+    let timer = durationMinutes * 60;
+    if (otpTimerInterval) clearInterval(otpTimerInterval);
+
+    otpTimerInterval = setInterval(() => {
+        let minutes = Math.floor(timer / 60);
+        let seconds = timer % 60;
+        minutes = minutes < 10 ? "0"+minutes : minutes;
+        seconds = seconds < 10 ? "0"+seconds : seconds;
+        timerDisplay.textContent = minutes + ":" + seconds;
+        if (--timer < 0) {
+            clearInterval(otpTimerInterval);
+            timerDisplay.textContent = "OTP expired";
+            resendBtn.style.display = "inline-block";
+        }
+    }, 1000);
+}
+startOtpTimer(otpExpiryMinutes);
+
+// Resend OTP button
+resendBtn.addEventListener("click", function () {
+    fetch("{% url 'password_reset:resend_otp' %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert("New OTP sent!");
+            resendBtn.style.display = "none";
+            startOtpTimer(otpExpiryMinutes);
+            otpCells.forEach(c => c.value = ''); // clear previous inputs
+            otpCells[0].focus();
+        } else {
+            alert(data.error || "Failed to resend OTP.");
+        }
+    }).catch(err => {
+        console.error(err);
+        alert("Error sending OTP.");
+    });
+});
+</script>
+{% endblock %}

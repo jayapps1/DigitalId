@@ -1,0 +1,118 @@
+{% extends "main.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <div class="mb-4">
+        <a href="{% url 'admin_dash:home' %}"
+           class="btn btn-outline-dark shadow-sm"
+           style="border-color: var(--fire-red); color: var(--fire-red);">
+            ← Back Home
+        </a>
+    </div>
+
+    <h4 class="mb-4" style="color: var(--fire-red);">
+        ID Requests – Admin Review
+    </h4>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- BULK ACTION BAR -->
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <button type="submit"
+                    formaction="{% url 'admin_dash:bulk_approve_requests' %}"
+                    class="btn btn-success">
+                Approve Selected Requests
+            </button>
+
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="select-all">
+                <label class="form-check-label" for="select-all">
+                    Select All Pending
+                </label>
+            </div>
+        </div>
+
+        {% for officer, approvals in grouped_approvals.items %}
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header"
+                 style="background-color: var(--safety-gold);">
+                <strong>{{ officer.get_full_name }}</strong><br>
+                <small>
+                    Service No: {{ officer.service_number }} |
+                    QR Method: {{ officer.get_preferred_qr_method_display }}
+                </small>
+            </div>
+
+            <ul class="list-group list-group-flush">
+                {% for approval in approvals %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                    <div class="d-flex align-items-center gap-2">
+                        {% if approval.status == 'PENDING' %}
+                            <input type="checkbox"
+                                   name="request_ids"
+                                   value="{{ approval.id }}">
+                        {% endif %}
+
+                        <div>
+                            <strong>{{ approval.id_request.get_request_type_display }}</strong><br>
+                            <small class="text-muted">
+                                {{ approval.id_request.date_requested|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <span class="badge
+                            {% if approval.status == 'APPROVED' %}bg-success
+                            {% elif approval.status == 'REJECTED' %}bg-danger
+                            {% else %}bg-warning text-dark{% endif %}">
+                            {{ approval.get_status_display }}
+                        </span>
+
+                        <div class="mt-2 d-flex flex-column gap-1">
+                            <a href="{% url 'admin_dash:admin_id_request_detail' officer.staffid %}"
+                               class="btn btn-sm btn-outline-secondary">
+                                View
+                            </a>
+
+                            {% if approval.status == 'APPROVED' %}
+                                <button type="submit"
+                                        formaction="{% url 'admin_dash:resend_qr' officer.staffid %}"
+                                        class="btn btn-sm btn-outline-primary">
+                                    Resend QR
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% empty %}
+            <p class="text-muted">No ID requests found.</p>
+        {% endfor %}
+
+    </form>
+
+</div>
+
+<!-- SELECT ALL SCRIPT -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const selectAll = document.getElementById("select-all");
+
+    if (!selectAll) return;
+
+    selectAll.addEventListener("change", function () {
+        const checked = this.checked;
+        document.querySelectorAll('input[name="request_ids"]').forEach(cb => {
+            cb.checked = checked;
+        });
+    });
+});
+</script>
+
+{% endblock %}

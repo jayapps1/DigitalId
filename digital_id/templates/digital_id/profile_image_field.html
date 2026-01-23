@@ -1,0 +1,112 @@
+{% load widget_tweaks %}
+
+<div class="mb-4 text-center">
+    <div style="width:220px; height:260px; margin:0 auto;">
+        <img
+            id="{{ preview_id }}"
+            src="{{ initial_url|default:'' }}"
+            class="img-thumbnail rounded-4 shadow-sm {% if not initial_url %}d-none{% endif %}"
+            style="width: 100%; height: 100%; object-fit: cover; cursor: grab;"
+            alt="{{ label|default:'Profile Photo' }}"
+        >
+    </div>
+
+    <div class="text-muted small mt-2">
+        Drag image to position • Scroll to zoom
+    </div>
+
+    <!-- Custom File Input Button -->
+    <label for="{{ input_id|default:field.auto_id }}" class="btn btn-gradient mt-3 fw-bold">
+        {{ label|default:'Change Profile Picture' }}
+    </label>
+    <input type="file" name="{{ field.name }}" id="{{ input_id|default:field.auto_id }}" class="d-none">
+
+    <input type="hidden" name="{{ hidden_input_name }}" id="{{ hidden_input_id }}">
+</div>
+
+<style>
+/* Gradient button styling */
+.btn-gradient {
+    display: inline-block;
+    background: linear-gradient(90deg, #FDBB30, #F57920);
+    color: #2E2E2E;
+    padding: 0.6rem 1.5rem;
+    font-weight: bold;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+.btn-gradient:hover {
+    background: linear-gradient(90deg, #F57920, #FDBB30);
+    color: #ffffff;
+    transform: scale(1.05);
+}
+</style>
+
+<script>
+// Optional: live preview when choosing a file
+document.getElementById("{{ input_id|default:field.auto_id }}").addEventListener("change", function(e) {
+    const [file] = e.target.files;
+    if (file) {
+        document.getElementById("{{ preview_id }}").src = URL.createObjectURL(file);
+        document.getElementById("{{ preview_id }}").classList.remove("d-none");
+    }
+});
+</script>
+
+
+
+<script>
+function initCropper(fileInputId, previewId, hiddenInputId) {
+    const input = document.getElementById(fileInputId);
+    const preview = document.getElementById(previewId);
+    const croppedInput = document.getElementById(hiddenInputId);
+
+    if (!input) return;
+
+    let cropper = null;
+
+    input.addEventListener("change", function () {
+        const file = this.files[0];
+        if (!file || !file.type.startsWith("image/")) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.classList.remove("d-none");
+
+            if (cropper) cropper.destroy();
+
+            cropper = new Cropper(preview, {
+                aspectRatio: 3/4,            // ID-card / portrait
+                viewMode: 1,
+                dragMode: "move",
+                autoCropArea: 1,
+                background: false,
+                responsive: true,
+                zoomOnWheel: true,
+                movable: true,
+                scalable: true,
+                cropBoxResizable: false,
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // On form submit, generate cropped image
+    const form = input.closest("form");
+    form.addEventListener("submit", function () {
+        if (cropper) {
+            const canvas = cropper.getCroppedCanvas({
+                width: 450,
+                height: 600,
+                imageSmoothingQuality: "high"
+            });
+            croppedInput.value = canvas.toDataURL("image/jpeg", 0.9);
+        }
+    });
+}
+</script>

@@ -1,0 +1,176 @@
+{% extends "main.html" %}
+{% load widget_tweaks %}
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- Back Button -->
+    <div class="mb-4">
+        {% if is_admin_view %}
+            <a href="{% url 'admin_dash:home' %}" class="btn gnfs-btn-back">← Back to Admin Dashboard</a>
+        {% elif is_self %}
+            <a href="{% url 'officers_dash:dashboard' %}" class="btn gnfs-btn-back">← Back to My Dashboard</a>
+        {% endif %}
+    </div>
+
+    <!-- Page Title -->
+    <div class="text-center mb-5">
+        <h2 class="fw-bold" style="
+            background: linear-gradient(90deg, #FDBB30, #F57920);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+        ">
+            Officer Detail
+        </h2>
+        <p class="text-muted fs-5 text-uppercase">
+            {{ object.firstname }} {{ object.lastname }} — Staff ID: {{ object.staffid }}
+        </p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <!-- Profile Card -->
+            <div class="card shadow-lg border-0 mb-5 rounded-4">
+
+                <!-- Card Header -->
+                <div class="card-header text-center py-3" style="
+                    background: linear-gradient(90deg, #FDBB30, #F57920);
+                    color: #F1F1F1;
+                    font-size: 1.2rem;
+                    text-transform: uppercase;
+                ">
+                    <strong>Profile Information</strong>
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-body p-4 bg-white text-dark text-uppercase">
+                    <div class="row g-4">
+
+                        <!-- Left Column: Officer Info -->
+                        <div class="col-md-6">
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">Service No</div>
+                                <div>{{ object.service_number }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">Full Name</div>
+                                <div>{{ object.firstname }} {{ object.lastname }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">Email</div>
+                                <div>{{ object.email }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">Phone</div>
+                                <div>{{ object.phone }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">Gender</div>
+                                <div>{{ object.gender }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">Ghana Card</div>
+                                <div>{{ object.ghcard }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">Region</div>
+                                <div>{{ object.region }}</div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F9F9F9;">
+                                <div class="fw-semibold">District</div>
+                                <div>{{ object.district }}</div>
+                            </div>
+
+                            {% if object.profile %}
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F1F1F1;">
+                                    <div class="fw-semibold">Rank</div>
+                                    <div>{{ object.profile.rank }}</div>
+                                </div>
+
+                                {% if object.profile.blood_group %}
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F1F1F1;">
+                                    <div class="fw-semibold">Blood Group</div>
+                                    <div>{{ object.profile.get_blood_group_display }}</div>
+                                </div>
+                                {% endif %}
+
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F1F1F1;">
+                                    <div class="fw-semibold">Leave Type</div>
+                                    <div>{{ object.profile.get_leave_type_display }}</div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded-2" style="background-color: #F1F1F1;">
+                                    <div class="fw-semibold">Called Off</div>
+                                    <div>
+                                        {% if object.profile.called_off %}
+                                            <span class="badge bg-danger">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-success">No</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Right Column: Profile Pic & QR -->
+                        <div class="col-md-6 text-center">
+                            {% if object.profile and object.profile.photo %}
+                                <img src="{{ object.profile.photo.url }}"
+                                     class="img-thumbnail mb-3 rounded-4 shadow-sm"
+                                     style="width: 200px; height: 220px; object-fit: cover;">
+                            {% endif %}
+
+                            {% if object.profile and object.profile.qr_image %}
+                                <div class="mt-3">
+                                    <div class="fw-semibold mb-1">QR Code</div>
+                                    <img src="{{ object.profile.qr_image.url }}" class="img-thumbnail rounded-3 shadow-sm" width="160">
+                                </div>
+                            {% endif %}
+
+                            {% if not object.profile %}
+                                <div class="alert mt-3" style="background-color: #A7D8DE; color: #2E2E2E;">
+                                    No profile has been created for this officer.
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-center flex-wrap gap-3 mb-5">
+                {% if is_admin_view %}
+                    <a href="{% url 'admin_dash:admin_officer_edit' object.staffid %}" class="btn text-white px-4" style="background-color: #FDBB30;">
+                        Edit Officer
+                    </a>
+                    <a href="{% url 'admin_dash:admin_officer_delete' object.staffid %}" class="btn text-white px-4" style="background-color: #D71920;">
+                        Delete Officer
+                    </a>
+                    <a href="{% url 'admin_dash:home' %}" class="btn btn-secondary px-4">Back to Dashboard</a>
+                {% elif is_self %}
+                    <a href="{% url 'admin_dash:admin_officer_edit' object.staffid %}" class="btn text-white px-4" style="background-color: #FDBB30;">
+                        Edit My Details
+                    </a>
+                    <a href="{% url 'officers_dash:dashboard' %}" class="btn btn-secondary px-4">Back to My Dashboard</a>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

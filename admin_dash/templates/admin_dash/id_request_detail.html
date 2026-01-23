@@ -1,0 +1,113 @@
+{% extends "main.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <!-- Back Buttons -->
+    <div class="mb-3 d-flex justify-content-between">
+        <a href="{% url 'admin_dash:home' %}"
+           class="btn btn-outline-dark shadow-sm"
+           style="border-color: var(--fire-red); color: var(--fire-red);">
+            ← Back Home
+        </a>
+
+        <a href="{% url 'admin_dash:admin_id_request_list' %}"
+           class="btn btn-outline-dark shadow-sm"
+           style="border-color: var(--fire-red); color: var(--fire-red);">
+            ← Back to List
+        </a>
+    </div>
+
+    <div class="card shadow-lg">
+        <div class="card-header"
+             style="background-color: var(--fire-red); color: white;">
+            <strong>ID Request Review</strong>
+        </div>
+
+        <div class="card-body"
+             style="background-color: var(--soft-mint);">
+
+            <h5 class="mb-2">{{ approval.id_request.officer.get_full_name }}</h5>
+
+            <p class="mb-1">
+                <strong>Service No:</strong> {{ approval.id_request.officer.service_number }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Request Type:</strong> {{ approval.id_request.get_request_type_display }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Approval Status:</strong> {{ approval.get_status_display }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Payment Status:</strong>
+                {{ approval.id_request.payment.status|default:"NOT PAID" }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Refund Status:</strong>
+                {{ approval.id_request.payment.refund_status|default:"—" }}
+            </p>
+
+            <p class="mb-1">
+                <strong>Preferred QR Method:</strong>
+                {{ approval.id_request.officer.get_preferred_qr_method_display }}
+            </p>
+
+            <hr>
+
+            {# ===============================
+               ACTION CONTROLS
+               =============================== #}
+
+            {% if approval.status != "PENDING" %}
+                <div class="alert alert-info mt-3">
+                    This request has already been processed.
+                </div>
+
+            {% elif approval.id_request.payment.status != "SUCCESS" %}
+                <div class="alert alert-warning mt-3">
+                    <strong>Action disabled.</strong><br>
+                    This request cannot be approved or rejected because payment has not been completed.
+                </div>
+
+            {% elif approval.id_request.payment.refund_status in "PENDING,SUCCESS" %}
+                <div class="alert alert-warning mt-3">
+                    <strong>Action disabled.</strong><br>
+                    Refund has already been processed or is pending. No further actions allowed.
+                </div>
+
+            {% else %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button name="action"
+                                value="APPROVED"
+                                class="btn"
+                                style="background-color: #28a745; color: white;">
+                            Approve
+                        </button>
+
+                        <button name="action"
+                                value="REJECTED"
+                                class="btn"
+                                style="background-color: var(--fire-red); color: white;">
+                            Reject
+                        </button>
+                    </div>
+                </form>
+            {% endif %}
+
+        </div>
+
+        <div class="card-footer text-muted"
+             style="background-color: var(--light-blue);">
+            Reviewed by: {{ approval.approved_by.get_full_name|default:"—" }}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

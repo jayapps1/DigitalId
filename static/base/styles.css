@@ -1,0 +1,315 @@
+/* ===============================
+   GNFS COLORS
+================================ */
+:root {
+    --fire-red: #D71920;
+    --safety-gold: #FDBB30;
+    --soft-mint: #8BC0A9;
+    --light-blue: #A7D8DE;
+    --charcoal: #2E2E2E;
+}
+
+  
+
+
+/* =========================
+   FORCE DROPDOWN ABOVE
+   ========================= */
+.dropdown-menu-up {
+  top: auto !important;
+  bottom: 100% !important;
+  margin-bottom: 0.5rem;
+  z-index: 2000;
+}
+
+/* =========================
+   GLOBAL DROPDOWN FIX
+   ========================= */
+.dropdown-menu {
+  position: absolute;
+  z-index: 1200;
+  will-change: top, left; /* smooth appearance */
+}
+
+/* Allow dropdown to escape navbar */
+.navbar,
+.navbar-collapse,
+.gnfs-navbar {
+  overflow: visible !important;
+}
+
+/* =========================
+   MAIN NAVBAR
+   ========================= */
+.gnfs-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  border-bottom: 3px solid rgba(215, 25, 32, 0.8);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+  background: rgba(139, 192, 169, 0.5);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+/* BRAND */
+.gnfs-brand {
+  font-weight: 700;
+  font-size: 1.45rem;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.gnfs-brand span {
+  color: #FDBB30;
+}
+
+/* LINKS */
+.gnfs-link {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  margin: 0 0.6rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  position: relative;
+}
+.gnfs-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background-color: #FDBB30;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.gnfs-link:hover::after {
+  width: 100%;
+  left: 0;
+}
+.gnfs-link:hover {
+  background-color: rgba(255, 204, 0, 0.2);
+  color: #fff;
+}
+
+/* LOGIN HIGHLIGHT */
+.login-highlight {
+  color: #FDBB30;
+  font-weight: 600;
+}
+.login-highlight:hover {
+  background: rgba(253, 187, 48, 0.25);
+  color: #fff;
+}
+
+/* =========================
+   DROPDOWN STYLE
+   ========================= */
+.gnfs-dropdown {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  border: 1px solid rgba(167, 216, 222, 0.6);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+}
+.gnfs-dropdown .dropdown-item {
+  color: #2E2E2E;
+  border-radius: 8px;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+.gnfs-dropdown .dropdown-item:hover {
+  background: rgba(139, 192, 169, 0.35);
+  color: #2E2E2E;
+}
+
+/* SEARCH */
+.gnfs-search input {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 30px 0 0 30px;
+  border: 1px solid rgba(167, 216, 222, 0.8);
+  backdrop-filter: blur(8px);
+}
+.gnfs-search-btn {
+  background: rgba(215, 25, 32, 0.9);
+  color: #fff;
+  border-radius: 0 30px 30px 0;
+  padding: 0 1.4rem;
+  border: none;
+  transition: background 0.25s ease;
+}
+.gnfs-search-btn:hover {
+  background: #B5161C;
+}
+
+/* TOGGLER */
+.gnfs-toggler {
+  border-color: #FDBB30;
+}
+
+/* =========================
+   ADMIN SUBNAV
+   ========================= */
+.gnfs-subnavbar {
+  position: sticky;
+  top: 56px;
+  z-index: 1000;
+  background-color: #2b2f38;
+  padding: 0.8rem 1rem;
+  border-top: 3px solid var(--fire-red);
+}
+.gnfs-subnavbar .nav {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+.gnfs-subnavbar .nav-link {
+  color: #fff;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+.gnfs-subnavbar .nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0%;
+  height: 3px;
+  background-color: #FDBB30;
+  transition: width 0.3s ease, left 0.3s ease;
+}
+.gnfs-subnavbar .nav-link:hover::after {
+  width: 100%;
+  left: 0;
+}
+.gnfs-subnavbar .nav-link:hover {
+  background-color: rgba(255, 204, 0, 0.15);
+  color: #fff;
+}
+
+
+
+
+/* ===============================
+   ADMIN DASHBOARD TITLE
+================================ */
+.admin-dashboard-title {
+    text-align: center;
+    font-weight: 800;
+    font-size: 1.9rem;
+    text-transform: uppercase;
+    padding: 2rem 0 1.4rem;
+    position: relative;
+    letter-spacing: 1.2px;
+
+    /* Gradient text */
+    background: linear-gradient(
+        90deg,
+        var(--fire-red),
+        var(--safety-gold)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Animated underline */
+.admin-dashboard-title::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 0%;
+    height: 4px;
+    background: linear-gradient(
+        90deg,
+        var(--fire-red),
+        var(--safety-gold)
+    );
+    border-radius: 6px;
+    transform: translateX(-50%);
+    transition: width 0.4s ease;
+}
+
+/* Animate on hover */
+.admin-dashboard-title:hover::after {
+    width: 180px;
+}
+
+/* ===============================
+   QR + PRINT ICON REFINEMENT
+================================ */
+
+/* Small QR thumbnail */
+.qr-thumb {
+    width: 30px;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Extra-small button */
+.btn-xs {
+    padding: 0.10rem 0.30rem;
+    font-size: 0.60rem;
+    line-height: 1;
+}
+
+/* Print icon sizing */
+.qr-print-btn i {
+    font-size: 0.6rem;
+}
+
+/* Subtle hover polish */
+.qr-print-btn:hover {
+    background-color: var(--safety-gold);
+    border-color: var(--safety-gold);
+    color: #000;
+}
+
+/* Allow table to respect column widths */
+.table {
+    table-layout: auto;
+}
+
+/* Stretch Name column */
+.col-name {
+    text-transform: uppercase;
+    min-width: 200px;
+    width: 20%;
+    white-space: nowrap;
+}
+
+
+/* showing admin name on top of the admin dash */
+.admin-name-wrapper {
+    text-align: center;
+}
+
+.admin-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6c757d;
+}
+
+.admin-fullname {
+    font-weight: 700;
+    color: #1C1C1C;
+    animation: adminFadeSlide 0.9s ease-out forwards;
+}
+
+@keyframes adminFadeSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
