@@ -1,0 +1,69 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header" style="background-color:#FDBB30; color:#2E2E2E;">
+                    <h5 class="mb-0 fw-bold">Import Officer Profiles from Excel (Admin Only)</h5>
+                </div>
+
+                <div class="card-body" style="background-color:#FFFFFF; color:#2E2E2E;">
+                    <p class="text-muted small">
+                        Upload an Excel (.xlsx) file containing officer information. Default password is 
+                        '<strong>Officer@123</strong>' if none provided. Officers will be required to change their password at first login.
+                    </p>
+
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- File Upload Form -->
+                    <form id="importForm" method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        <input type="file" name="excel_file" accept=".xlsx" required class="form-control mb-3">
+                        <button type="submit" class="btn btn-lg fw-bold w-100" 
+                                style="background-color:#D71920; color:#FFFFFF; border:none;">
+                            Import Officers
+                        </button>
+                    </form>
+
+                    <!-- Loading / Progress Bar -->
+                    <div id="loading" class="mt-3" style="display:none;">
+                        <p class="fw-bold text-center">Importing officers... Please wait.</p>
+                        <div class="progress">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 100%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="alert mt-3" style="background-color:#8BC0A9; color:#2E2E2E; border:none;">
+                        <strong>Important:</strong><br>
+                        Excel columns must be: <strong>staffid, service_number, firstname, lastname, gender, role, region, district, rank, station</strong>.<br>
+                        Default password '<strong>Officer@123</strong>' will be assigned if left blank.
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript to show loading/progress bar -->
+<script>
+    const form = document.getElementById("importForm");
+    form.addEventListener("submit", () => {
+        document.getElementById("loading").style.display = "block";
+    });
+</script>
+{% endblock %}

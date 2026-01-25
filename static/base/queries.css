@@ -1,0 +1,17 @@
+/* Hover for desktop */
+@media (min-width: 900px) {
+    .dropdown:hover .dropdown-menu {
+        display: block;
+    }
+}
+
+/* Mobile: dropdown opens by click */
+@media (max-width: 899px) {
+    .dropdown-menu {
+        display: none;
+    }
+
+    .dropdown.active .dropdown-menu {
+        display: flex;
+    }
+}

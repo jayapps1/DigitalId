@@ -1,0 +1,144 @@
+{% extends "main.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-header" style="background-color:#FDBB30; color:#2E2E2E;">
+          <h5 class="mb-0 fw-bold">Officer Registration (Admin Only)</h5>
+        </div>
+
+        <div class="card-body" style="background-color:#FFFFFF; color:#2E2E2E;">
+          <p class="text-muted small">
+            Create a new officer account. Default password is '<strong>Officer@123</strong>' if none provided.
+            Officer will be required to change the password at first login.
+          </p>
+
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="post" novalidate id="officerForm">
+            {% csrf_token %}
+
+            {% for field in form %}
+              <div class="mb-3" id="field-{{ field.name }}">
+                {{ field.label_tag }}
+
+                {% if field.name == "role" or field.name == "region" %}
+                  {{ field|add_class:"form-select" }}
+                {% elif field.name == "station" %}
+                  {{ field|add_class:"form-select select2 text-uppercase" }}
+                  <small class="d-block mt-1 text-warning">Type or select station</small>
+                {% elif field.name in "is_staff is_superuser" %}
+                  {# Staff and Superuser checkboxes are handled separately #}
+                {% else %}
+                  {{ field|add_class:"form-control"|attr:"placeholder:Enter " }}
+                {% endif %}
+
+                {% for error in field.errors %}
+                  <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+              </div>
+
+              {% if field.name == "role" %}
+                <div id="admin-checkboxes" style="margin-top:10px;">
+                  {% if form.is_staff %}
+                  <div class="form-check" id="is_staff_div" style="display:none;">
+                    {{ form.is_staff|add_class:"form-check-input" }}
+                    {{ form.is_staff.label_tag }}
+                  </div>
+                  {% endif %}
+
+                  {% if form.is_superuser %}
+                  <div class="form-check" id="is_superuser_div" style="display:none;">
+                    {{ form.is_superuser|add_class:"form-check-input" }}
+                    {{ form.is_superuser.label_tag }}
+                  </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                  <div>{{ error }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div class="alert" style="background-color:#8BC0A9; color:#2E2E2E; border:none;">
+              <strong>Important:</strong><br>
+              Default password will be assigned if left blank.
+              Officer must change password at first login.
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-lg fw-bold" style="background-color:#D71920; color:#FFFFFF; border:none;">
+                Create Officer Account
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Include jQuery and Select2 #}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const roleField = document.getElementById("id_role");
+  const isStaffDiv = document.getElementById("is_staff_div");
+  const isSuperuserDiv = document.getElementById("is_superuser_div");
+
+  function toggleAdminCheckboxes() {
+    if (!roleField) return;
+    const role = roleField.value.toLowerCase();
+
+    if (role.includes("admin") && !role.includes("super")) {
+      if (isStaffDiv) isStaffDiv.style.display = "block";
+      if (isSuperuserDiv) {
+        isSuperuserDiv.style.display = "none";
+        isSuperuserDiv.querySelector("input").checked = false;
+      }
+    } else if (role.includes("super")) {
+      if (isStaffDiv) isStaffDiv.style.display = "block";
+      if (isSuperuserDiv) isSuperuserDiv.style.display = "block";
+    } else {
+      if (isStaffDiv) {
+        isStaffDiv.style.display = "none";
+        isStaffDiv.querySelector("input").checked = false;
+      }
+      if (isSuperuserDiv) {
+        isSuperuserDiv.style.display = "none";
+        isSuperuserDiv.querySelector("input").checked = false;
+      }
+    }
+  }
+
+  if (roleField) {
+    roleField.addEventListener("change", toggleAdminCheckboxes);
+    toggleAdminCheckboxes();
+  }
+
+  // Initialize Select2 for station search
+  $('.select2').select2({
+    placeholder: "Type or select a station",
+    allowClear: true,
+    width: '100%'
+  });
+});
+</script>
+
+{% endblock %}

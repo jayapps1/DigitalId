@@ -1,0 +1,148 @@
+{% extends "main.html" %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<style>
+.card-header.gradient-animate {
+    background: linear-gradient(90deg, #FFC107, #FDBB30);
+    background-size: 200% 200%;
+    color: #2E2E2E;
+    transition: background-position 0.8s ease-in-out;
+}
+.card-header.gradient-animate:hover {
+    background-position: 100% 0;
+}
+</style>
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+
+            <!-- ADMIN-PROVIDED INFO -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header gradient-animate">
+                    <h5 class="mb-0 fw-bold">Admin-provided Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Staff ID</label>
+                            <input class="form-control" value="{{ user_form.instance.staffid }}" disabled>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Gender</label>
+                            <input class="form-control" value="{{ user_form.instance.get_gender_display }}" disabled>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">First Name</label>
+                            <input class="form-control" value="{{ user_form.instance.firstname }}" disabled>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Last Name</label>
+                            <input class="form-control" value="{{ user_form.instance.lastname }}" disabled>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPLETE PROFILE -->
+            <div class="card shadow-sm">
+                <div class="card-header gradient-animate">
+                    <h5 class="mb-0 fw-bold">Complete Your Profile</h5>
+                </div>
+
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+
+                        <input type="hidden" name="cropped_photo" id="croppedPhotoReg">
+
+                        <div class="row g-3">
+
+                            <!-- GHANA CARD -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Ghana Card</label>
+                                {{ user_form.ghcard|add_class:"form-control text-uppercase" }}
+                                {% for error in user_form.ghcard.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- PHONE -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Phone</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <img src="{% static 'digital_id/ghana_flag.png' %}" style="width:24px;">
+                                    </span>
+                                    {{ user_form.phone|add_class:"form-control" }}
+                                </div>
+                                {% for error in user_form.phone.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- EMAIL -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Email</label>
+                                {{ user_form.email|add_class:"form-control" }}
+                                {% for error in user_form.email.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- BLOOD GROUP -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Blood Group</label>
+                                {{ user_form.blood_group|add_class:"form-select text-uppercase" }}
+                                {% for error in user_form.blood_group.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- PROFILE PHOTO -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Profile Picture</label>
+                                {{ user_form.photo|add_class:"form-control" }}
+
+                                <img id="regPhotoPreview"
+                                     class="img-fluid mt-2 rounded border"
+                                     style="max-height: 200px; display: none;">
+
+                                {% for error in user_form.photo.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                        </div>
+
+                        <!-- SUBMIT -->
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-dark">
+                                Save Profile
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- CROPPER INIT -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    if (typeof initCropper === "function") {
+        initCropper("id_photo", "regPhotoPreview", "croppedPhotoReg");
+    }
+});
+</script>
+{% endblock %}

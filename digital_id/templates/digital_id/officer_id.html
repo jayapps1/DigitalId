@@ -1,0 +1,209 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GNFS Officer ID</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; }
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #f8f9fa;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.id-card-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10mm;
+}
+
+/* CR80 card container with radius */
+.card-container {
+    position: relative;
+    width: 85.6mm;
+    height: 53.98mm;
+    border-radius: 3mm;
+    overflow: hidden;
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* Card background images */
+.id-card-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* Content safe zone */
+.content-layer {
+    position: absolute;
+    top: 15mm;
+    bottom: 11mm;
+    left: 5mm;
+    right: 5mm;
+    display: flex;
+    gap: 4mm;
+    font-size: 7pt;
+    z-index: 2;
+    align-items: flex-start;
+
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* PHOTO */
+.photo-block { width: 20mm; text-align: center; }
+.photo-block img { width: 18mm; height: 24mm; object-fit: cover; border-radius: 1mm; }
+.service-number { margin-top: 1mm; font-size: 6pt; font-weight: 700; }
+
+/* DETAILS */
+.details { flex: 1; text-transform: uppercase; font-size: 7pt; line-height: 1.25; color: #000; }
+.details div { margin-bottom: 1mm; }
+
+/* QR CODE (Back only) */
+.qr-block {
+    position: absolute;
+    bottom: 10mm;
+    right: 2mm;
+    width: 15mm;
+    height: 15mm;
+    z-index: 3;
+}
+.qr-block img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* PRINT BUTTONS */
+.buttons-wrapper { margin-top: 14px; }
+
+@media print {
+    @page { 
+        size: 85.6mm 53.98mm; 
+        margin: 0; 
+    }
+
+    html, body { 
+        width: 85.6mm;
+        height: 53.98mm;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .buttons-wrapper { display: none !important; }
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+function printCard(cardId) {
+    const originalContents = document.body.innerHTML;
+    const cardContents = document.getElementById(cardId).outerHTML;
+    document.body.innerHTML = cardContents;
+    window.print();
+    document.body.innerHTML = originalContents;
+}
+
+// Save ID card as PNG in exact CR80 size (300 DPI)
+function saveCardAsPNG(cardId) {
+    const card = document.getElementById(cardId);
+
+    // CR80 dimensions at 300 DPI
+    const widthPx = 1011; // 85.6mm
+    const heightPx = 638; // 53.98mm
+
+    html2canvas(card, { width: card.offsetWidth, height: card.offsetHeight, scale: widthPx / card.offsetWidth }).then(canvas => {
+        // Resize canvas to exact CR80 size
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = widthPx;
+        finalCanvas.height = heightPx;
+        const ctx = finalCanvas.getContext('2d');
+        ctx.drawImage(canvas, 0, 0, widthPx, heightPx);
+
+        const link = document.createElement('a');
+        link.download = cardId + '.png';
+        link.href = finalCanvas.toDataURL("image/png");
+        link.click();
+    });
+}
+</script>
+
+</head>
+<body>
+
+<div class="id-card-wrapper">
+
+     <!-- BACK BUTTON -->
+    <div class="back-btn">
+        {% if user.is_staff or user.is_superuser %}
+            <a href="{% url 'admin_dash:home' %}" class="btn btn-secondary">&larr; Back to Admin Dashboard</a>
+        {% else %}
+            <a href="{% url 'officers_dash:dashboard' %}" class="btn btn-secondary">&larr; Back to Officer Dashboard</a>
+        {% endif %}
+    </div>
+
+    <!-- FRONT CARD -->
+    <div class="card-container" id="front-card">
+        <img src="{% static 'digital_id/gnfs_template.png' %}" class="id-card-img" alt="GNFS ID Front">
+        <div class="content-layer">
+            <div class="photo-block">
+                {% if profile.photo %}
+                    <img src="{{ profile.photo.url }}" alt="Officer Photo">
+                {% else %}
+                    <div style="font-size:6pt;">NO PHOTO</div>
+                {% endif %}
+                <div class="service-number">{{ profile.user.service_number|default:"-" }}</div>
+            </div>
+            <div class="details">
+                <div><strong>NAME:</strong> {{ profile.user.firstname|default:"-" }} {{ profile.user.lastname|default:"-" }}</div>
+                <div><strong>RANK:</strong> {{ profile.get_rank_display|default:"-" }}</div>
+                <div><strong>STATION:</strong> {{ profile.station|default:"-" }}</div>
+                <div><strong>BLOOD GROUP:</strong> {{ profile.blood_group|default:"-" }}</div>
+                <div><strong>EMG CONTACT #:</strong> {{ profile.user.phone|default:"-" }}</div>
+                <div><strong>EXPIRY:</strong> <span style="color:#c00000;font-weight:700;">{% if profile.qr_expiry_date %}{{ profile.qr_expiry_date|date:"d M Y" }}{% else %}-{% endif %}</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BACK CARD -->
+    <div class="card-container" id="back-card">
+        <img src="{% static 'digital_id/gnfs_template_back.png' %}" class="id-card-img" alt="GNFS ID Back">
+        {% if profile.qr_image %}
+        <div class="qr-block">
+            <img src="{{ profile.qr_image.url }}" alt="QR Code Back">
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PRINT & SAVE BUTTONS -->
+    <div class="buttons-wrapper">
+        <button class="btn btn-primary" onclick="printCard('front-card')">Print Front Card</button>
+        <button class="btn btn-secondary" onclick="printCard('back-card')">Print Back Card</button>
+        <button class="btn btn-success" onclick="saveCardAsPNG('front-card')">Save Front as PNG</button>
+        <button class="btn btn-info" onclick="saveCardAsPNG('back-card')">Save Back as PNG</button>
+        <p style="font-size:10pt;color:red;">Tip: PNG will be exact CR80 size (85.6 × 53.98 mm at 300 DPI).</p>
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% extends "main.html" %}
+{% load static custom_filters %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <h3 class="mb-4 text-center" style="color: #D71920;">Request & Pay for ID</h3>
+
+    <div class="card mb-4 shadow-sm pay-card">
+        <div class="card-body" style="color: #2E2E2E;">
+            <p>
+                Select the type of ID request and proceed to pay. Once payment is successful,
+                the ID request will be automatically created.
+            </p>
+        </div>
+    </div>
+
+    <form method="POST" class="card shadow-sm p-4 mb-4 pay-card">
+        {% csrf_token %}
+
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                {{ form.errors }}
+            </div>
+        {% endif %}
+
+        <div class="mb-3">
+            <label class="form-label"><strong>Select Request Type:</strong></label><br>
+            
+            {% for radio in form.request_type %}
+                <div class="form-check form-check-inline">
+                    {{ radio.tag }}
+                    <label class="form-check-label" for="{{ radio.id_for_label }}">
+                        {{ radio.choice_label }} - GH₵ {{ payment_amounts|dict_get:radio.choice_value }}
+                    </label>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-lg pay-btn px-5 py-3">
+                Pay Now
+            </button>
+        </div>
+    </form>
+
+    <div class="text-center">
+        <a href="{% url 'officers_dash:dashboard' %}" class="btn dashboard-btn px-4 py-2">
+            Back to Dashboard
+        </a>
+    </div>
+
+</div>
+
+<style>
+.pay-card {
+    background-color: #8BC0A9;
+    border: 2px solid #FDBB30;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.pay-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+}
+
+.pay-btn {
+    background-color: #D71920;
+    color: #FFFFFF;
+    border: 2px solid #FDBB30;
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.pay-btn:hover {
+    background-color: #A71A22;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.dashboard-btn {
+    background-color: #A7D8DE;
+    color: #2E2E2E;
+    border: 2px solid #8BC0A9;
+    font-weight: 600;
+}
+.dashboard-btn:hover {
+    background-color: #92CDD2;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 576px) {
+    .pay-btn, .dashboard-btn { width: 100%; padding: 12px 0; }
+}
+</style>
+{% endblock %}

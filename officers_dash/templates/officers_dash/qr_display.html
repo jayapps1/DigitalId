@@ -1,0 +1,229 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GNFS Officer ID</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+/* ==================================================
+   GLOBAL RESET
+================================================== */
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: #f8f9fa;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ==================================================
+   SCREEN CENTERING
+================================================== */
+.id-card-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ==================================================
+   CR80 CARD (PHYSICAL SIZE LOCK)
+================================================== */
+.card-container {
+    position: relative;
+    width: 85.6mm;
+    height: 53.98mm;
+}
+
+/* ==================================================
+   BACKGROUND TEMPLATE (PRINT SAFE)
+================================================== */
+.id-card-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 3mm;
+
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* ==================================================
+   CONTENT SAFE ZONE
+   (EXCLUDES BLACK HEADER + RED FOOTER)
+================================================== */
+.content-layer {
+    position: absolute;
+    top: 15mm;
+    bottom: 11mm;
+    left: 5mm;
+    right: 5mm;
+
+    display: flex;
+    gap: 4mm;
+    font-size: 7pt;
+    z-index: 2;
+    align-items: flex-start;
+}
+
+/* ==================================================
+   PHOTO
+================================================== */
+.photo-block {
+    width: 20mm;
+    text-align: center;
+}
+
+.photo-block img {
+    width: 18mm;
+    height: 24mm;
+    object-fit: cover;
+    border-radius: 1mm;
+}
+
+.service-number {
+    margin-top: 1mm;
+    font-size: 6pt;
+    font-weight: 700;
+}
+
+/* ==================================================
+   DETAILS
+================================================== */
+.details {
+    flex: 1;
+    text-transform: uppercase;
+    font-size: 7pt;
+    line-height: 1.25;
+    color: #000;
+}
+
+.details div {
+    margin-bottom: 1mm;
+}
+
+/* ==================================================
+   QR CODE
+================================================== */
+.qr-block {
+    width: 20mm;
+    text-align: center;
+}
+
+.qr-block img {
+    width: 18mm;
+    height: 18mm;
+    object-fit: contain;
+}
+
+/* ==================================================
+   PRINT BUTTON (SCREEN ONLY)
+================================================== */
+.buttons-wrapper {
+    margin-top: 14px;
+}
+
+/* ==================================================
+   PRINT LOCK — CR80 EXACT
+================================================== */
+@media print {
+
+    @page {
+        size: 85.6mm 53.98mm;
+        margin: 0;
+    }
+
+    html, body {
+        width: 85.6mm;
+        height: 53.98mm;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .buttons-wrapper {
+        display: none !important;
+    }
+
+    .id-card-wrapper {
+        min-height: auto;
+    }
+
+    .id-card-img {
+        box-shadow: none !important;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="id-card-wrapper">
+
+    <div class="card-container">
+
+        <!-- GNFS BACKGROUND -->
+        <img
+            src="{% static 'digital_id/gnfs_template.png' %}"
+            class="id-card-img"
+            alt="GNFS ID Background"
+        >
+
+        <!-- CONTENT -->
+        <div class="content-layer">
+
+            <!-- PHOTO -->
+            <div class="photo-block">
+                {% if profile.photo %}
+                    <img src="{{ profile.photo.url }}" alt="Officer Photo">
+                {% else %}
+                    <div style="font-size:6pt;">NO PHOTO</div>
+                {% endif %}
+
+                <div class="service-number">
+                    {{ profile.user.service_number|default:"-" }}
+                </div>
+            </div>
+
+            <!-- DETAILS -->
+            <div class="details">
+                <div><strong>NAME:</strong> {{ profile.user.firstname }} {{ profile.user.lastname }}</div>
+                <div><strong>RANK:</strong> {{ profile.get_rank_display }}</div>
+                <div><strong>LEAVE TYPE:</strong> {{ profile.get_leave_type_display }}</div>
+                <div><strong>STATION:</strong> {{ profile.station }}</div>
+                <div><strong>REGION:</strong> {{ profile.user.region }}</div>
+                <div><strong>DISTRICT:</strong> {{ profile.user.district }}</div>
+                <div>
+                    <strong>EXPIRY:</strong>
+                    <span style="color:#c00000;font-weight:700;">
+                        {{ profile.qr_expiry_date|date:"d M Y" }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- QR CODE -->
+            <div class="qr-block">
+                {% if profile.qr_image %}
+                    <img src="{{ profile.qr_image.url }}" alt="QR Code">
+                {% else %}
+                    <div style="font-size:6pt;">NO QR</div>
+                {% endif %}
+            </div>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+</body>
+</html>

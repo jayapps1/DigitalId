@@ -1,0 +1,68 @@
+{% extends "main.html" %}
+{% block content %}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+
+            <div class="card shadow-lg border-0">
+
+                <!-- Card Header -->
+                <div class="card-header text-white text-center"
+                     style="background-color: #D71920;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Confirm Officer Deletion
+                    </h5>
+                </div>
+
+                <!-- Card Body -->
+                <div class="card-body text-center"
+                     style="background-color: #FFFFFF; color: #2E2E2E;">
+
+                    <p class="fs-5 mb-3">
+                        Are you sure you want to permanently delete:
+                    </p>
+
+                    <div class="p-3 rounded mb-4"
+                         style="background-color: #8BC0A9;">
+                        <strong>
+                            {{ object.firstname }} {{ object.lastname }}
+                        </strong><br>
+                        <small>
+                            Staff ID: {{ object.staffid }}
+                        </small>
+                    </div>
+
+                    <p class="text-danger fw-semibold">
+                        This action cannot be undone.
+                    </p>
+
+                    <!-- Action Buttons -->
+                    <form method="post" class="d-flex justify-content-center gap-3 mt-4">
+                        {% csrf_token %}
+
+                        <button type="submit"
+                                class="btn px-4 text-white"
+                                style="background-color: #D71920;">
+                            <i class="bi bi-trash-fill me-1"></i>
+                            Delete Officer
+                        </button>
+
+                        <a href="{% url 'admin_dash:home' %}"
+                           class="btn px-4"
+                           style="background-color: #FDBB30; color: #2E2E2E;">
+                            <i class="bi bi-arrow-left-circle me-1"></i>
+                            Cancel
+                        </a>
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,191 @@
+{% extends "main.html" %}
+{% load humanize %}
+
+{% block content %}
+
+<!-- Include SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div class="container mt-4">
+    <h4 class="mb-3">Notifications</h4>
+
+    {% if notifications %}
+    <form id="bulk-delete-form" method="post" action="{% url 'digital_id:bulk_delete_notifications' %}">
+        {% csrf_token %}
+
+        <ul class="list-group mb-3">
+            {% for note in notifications %}
+                <li class="list-group-item d-flex flex-column {% if not note.is_read %}fw-bold{% endif %}">
+
+                    <div class="d-flex justify-content-between align-items-start">
+
+                        <!-- Checkbox -->
+                        <div class="form-check me-2">
+                            <input class="form-check-input notification-checkbox"
+                                   type="checkbox"
+                                   name="notification_ids"
+                                   value="{{ note.id }}">
+                        </div>
+
+                        <!-- Notification Content -->
+                        <div class="ms-2 me-auto">
+                            <p class="mb-1 notification-message">
+                                {% if note.message|length > 100 %}
+                                    {{ note.message|slice:":100" }}...
+                                    <span class="full-message d-none">{{ note.message }}</span>
+                                {% else %}
+                                    {{ note.message }}
+                                {% endif %}
+                            </p>
+                            <div class="small text-muted">
+                                {{ note.created_at|naturaltime }}
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-column gap-1">
+
+                            <!-- Open Details (AJAX marks as read) -->
+                            <a href="{% url 'digital_id:view_notification' note.id %}" 
+                               class="btn btn-sm open-notification-btn" 
+                               data-id="{{ note.id }}"
+                               style="background-color: var(--fire-red); color: #fff;">
+                                Open
+                            </a>
+
+                            
+
+                            <!-- Delete -->
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-btn"
+                                    data-url="{% url 'digital_id:delete_notification' note.id %}">
+                                Delete
+                            </button>
+
+                        </div>
+
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <button type="button" id="bulk-delete-btn" class="btn btn-danger" disabled>
+            Delete Selected (<span id="selected-count">0</span>)
+        </button>
+    </form>
+    {% else %}
+        <p class="text-muted">No notifications available.</p>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    // ===== INLINE READ MORE =====
+    document.querySelectorAll(".read-more-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+            const fullMsg = this.closest("li").querySelector(".full-message");
+            const msgEl = this.closest("li").querySelector(".notification-message");
+            if (fullMsg && fullMsg.classList.contains("d-none")) {
+                msgEl.textContent = fullMsg.textContent;
+                fullMsg.classList.remove("d-none");
+                this.textContent = "Collapse";
+            } else if (fullMsg) {
+                msgEl.textContent = fullMsg.textContent.slice(0, 100) + "...";
+                fullMsg.classList.add("d-none");
+                this.textContent = "Read More";
+            }
+        });
+    });
+
+    // ===== SINGLE DELETE =====
+    document.querySelectorAll(".delete-btn").forEach(btn => {
+        btn.addEventListener("click", function(e) {
+            e.preventDefault();
+            const url = this.dataset.url;
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "This notification will be deleted!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = url;
+                }
+            });
+        });
+    });
+
+    // ===== BULK DELETE =====
+    const bulkBtn = document.getElementById("bulk-delete-btn");
+    const checkboxes = document.querySelectorAll(".notification-checkbox");
+    const countSpan = document.getElementById("selected-count");
+
+    function updateBulkBtn() {
+        const selected = document.querySelectorAll(".notification-checkbox:checked").length;
+        countSpan.textContent = selected;
+        bulkBtn.disabled = selected === 0;
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener("change", updateBulkBtn));
+
+    bulkBtn.addEventListener("click", function(e) {
+        e.preventDefault();
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Selected notifications will be deleted!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById("bulk-delete-form").submit();
+            }
+        });
+    });
+
+    // ===== OPEN NOTIFICATION (AJAX read) =====
+    document.querySelectorAll(".open-notification-btn").forEach(btn => {
+        btn.addEventListener("click", function(e) {
+            e.preventDefault();
+            const noteId = this.dataset.id;
+            const url = this.href;
+
+            fetch(`/notifications/ajax/mark-as-read/${noteId}/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+            }).then(res => res.json())
+              .then(data => {
+                  // Optionally remove bold
+                  const li = btn.closest("li");
+                  if (data.success) li.classList.remove("fw-bold");
+
+                  // Update navbar unread count
+                  fetch("{% url 'digital_id:ajax_unread_count' %}")
+                      .then(res => res.json())
+                      .then(countData => {
+                          const badge = document.querySelector("#notificationDropdown .badge");
+                          if (badge) {
+                              if (countData.unread_count > 0) {
+                                  badge.textContent = countData.unread_count;
+                                  badge.classList.remove("d-none");
+                              } else {
+                                  badge.classList.add("d-none");
+                              }
+                          }
+                      });
+
+                  // Redirect to detail page
+                  window.location.href = url;
+              });
+        });
+    });
+
+});
+</script>
+
+{% endblock %}
