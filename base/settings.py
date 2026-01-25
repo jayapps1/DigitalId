@@ -27,6 +27,14 @@ CSRF_TRUSTED_ORIGINS = [
 
 
 # -------------------------------------------------
+# SITE URL / PROTOCOL
+# -------------------------------------------------
+# Use environment variables if available
+SITE_URL = os.environ.get("SITE_URL", "skiliteent.pythonanywhere.com")
+SITE_PROTOCOL = "https" if "pythonanywhere.com" in SITE_URL else "http"
+
+
+# -------------------------------------------------
 # APPLICATIONS
 # -------------------------------------------------
 INSTALLED_APPS = [

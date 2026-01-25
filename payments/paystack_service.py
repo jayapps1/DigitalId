@@ -9,16 +9,21 @@ from payments.models import Payment
 
 logger = logging.getLogger(__name__)
 
+from django.conf import settings
+
 def get_callback_url():
     """
     Returns the full callback URL for Paystack.
-    Automatically chooses HTTPS for PythonAnywhere/production.
-    Falls back to HTTP for local dev.
+    Uses PythonAnywhere domain if available, otherwise local dev.
     """
-    site_url = getattr(settings, "SITE_URL", "127.0.0.1:8000")
-    # If running on PythonAnywhere, always use HTTPS
+    # Ensure SITE_URL is set in settings or WSGI environment
+    site_url = getattr(settings, "SITE_URL", None) or "skiliteent.pythonanywhere.com"
+
+    # Use HTTPS on PythonAnywhere, otherwise fallback to HTTP for dev
     protocol = "https" if "pythonanywhere.com" in site_url else "http"
+
     return f"{protocol}://{site_url}/payments/verify/"
+
 
 
 def initialize_paystack_payment(payment: Payment):
