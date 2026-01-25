@@ -160,7 +160,9 @@ PAYSTACK_PUBLIC_KEY = "pk_test_67a38a57361436c62a7b74e2c7c3826efb5ca838"
 # base/settings.py
 import os
 
-SITE_URL = os.environ.get("SITE_URL", "127.0.0.1:8000")  # fallback to local dev
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+SITE_URL = os.environ.get('SITE_URL', '127.0.0.1:8000')
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY', 'sk_test_default')
 
 
 
