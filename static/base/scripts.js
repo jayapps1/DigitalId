@@ -64,7 +64,7 @@ function initCropper(fileInputId, imgPreviewId, hiddenInputId) {
 // ================================
 
 function updateBadge() {
-    fetch('/admin/api/pending-requests-count/')
+    fetch('/api/pending-requests-count/')
         .then(response => response.json())
         .then(data => {
             const badge = document.getElementById('pending-badge');
