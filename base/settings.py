@@ -155,7 +155,11 @@ LOGIN_REDIRECT_URL = "/officer/officer-dash/"
 
 PAYSTACK_SECRET_KEY = "sk_test_4a95174577feab5cb5651c96a51e5dfaf8291e31"
 PAYSTACK_PUBLIC_KEY = "pk_test_67a38a57361436c62a7b74e2c7c3826efb5ca838"
-SITE_URL = "172.20.10.9:8080"
+# base/settings.py
+
+DEBUG = False  # for production
+SITE_URL = "skiliteent.pythonanywhere.com"
+
 
 from decouple import config
 
