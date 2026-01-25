@@ -421,12 +421,13 @@ def admin_id_request_detail(request, staffid):
 # badge count in approvals 
 # -----------------------------
 
-from django.db.models import Q
+ # make sure the import points to the right place
 
 def pending_requests_api(request):
     if request.user.is_staff or request.user.is_superuser:
+        # Use the approval relation to filter
         count = IDRequest.objects.filter(
-            Q(approval__status="PENDING") | Q(approval__isnull=True)
+            approval__status="PENDING"
         ).count()
         return JsonResponse({"count": count})
     return JsonResponse({"count": 0})
