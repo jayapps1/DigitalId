@@ -421,11 +421,8 @@ def admin_id_request_detail(request, staffid):
 # badge count in approvals 
 # -----------------------------
 
- 
+@login_required
 def pending_requests_api(request):
-    """
-    Returns the number of pending ID requests for staff/superuser.
-    """
     if request.user.is_staff or request.user.is_superuser:
         count = IDRequest.objects.filter(approval__status="PENDING").count()
         return JsonResponse({"count": count})

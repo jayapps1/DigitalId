@@ -62,52 +62,31 @@ function initCropper(fileInputId, imgPreviewId, hiddenInputId) {
 // ================================
 // pending count refresh auto 
 // ================================
-function updateBadge() {
-    // Use the full path to your API endpoint
-    const apiUrl = '/admin/api/pending-requests-count/';
+const apiUrl = '/admin/api/pending-requests-count/';
+document.addEventListener('DOMContentLoaded', function() {
+    function updateBadge() {
+        fetch(apiUrl, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            const badge = document.getElementById('pending-badge');
+            if (!badge) return;
+            badge.textContent = data.count > 0 ? data.count : '';
+            badge.style.display = data.count > 0 ? 'inline' : 'none';
+        })
+        .catch(err => console.error('Error updating badge:', err));
+    }
 
-    fetch(apiUrl, {
-        method: 'GET',
-        credentials: 'same-origin', // ensures cookies/session are sent (important if your endpoint requires login)
-        headers: {
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        // Check if the response is OK (200)
-        if (!response.ok) {
-            throw new Error(`Server responded with status ${response.status}`);
-        }
-        // Try to parse JSON
-        return response.json();
-    })
-    .then(data => {
-        // Make sure the data has a "count" property
-        if (typeof data.count !== 'number') {
-            throw new Error("Invalid JSON structure: 'count' not found");
-        }
+    updateBadge();            // run once
+    setInterval(updateBadge, 10000); // every 10 seconds
+});
 
-        const badge = document.getElementById('pending-badge');
-        if (!badge) return; // skip if badge element not found
-
-        if (data.count > 0) {
-            badge.textContent = data.count;
-            badge.style.display = 'inline';
-        } else {
-            badge.style.display = 'none';
-        }
-    })
-    .catch(error => {
-        // Log any errors for debugging
-        console.error("Error updating badge:", error);
-    });
-}
-
-// Update every 10 seconds
-setInterval(updateBadge, 10000);
-
-// Run once immediately on page load
-document.addEventListener('DOMContentLoaded', updateBadge);
 
 
 
