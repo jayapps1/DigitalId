@@ -64,7 +64,7 @@ function initCropper(fileInputId, imgPreviewId, hiddenInputId) {
 // ================================
 
 function updateBadge() {
-    fetch('/api/pending-requests-count/')
+    fetch('/admin/api/pending-requests-count/')
         .then(response => response.json())
         .then(data => {
             const badge = document.getElementById('pending-badge');
@@ -78,7 +78,6 @@ function updateBadge() {
 }
 
 setInterval(updateBadge, 10000); // update every 10 seconds
-
 
 
  
