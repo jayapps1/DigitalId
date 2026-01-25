@@ -9,15 +9,24 @@ from payments.models import Payment
 
 logger = logging.getLogger(__name__)
 
-def initialize_paystack_payment(payment):
+def get_callback_url():
+    """
+    Returns the full callback URL for Paystack.
+    Automatically chooses HTTPS for PythonAnywhere/production.
+    Falls back to HTTP for local dev.
+    """
+    site_url = getattr(settings, "SITE_URL", "127.0.0.1:8000")
+    # If running on PythonAnywhere, always use HTTPS
+    protocol = "https" if "pythonanywhere.com" in site_url else "http"
+    return f"{protocol}://{site_url}/payments/verify/"
+
+
+def initialize_paystack_payment(payment: Payment):
     """
     Initialize a Paystack transaction for the given Payment object.
     Returns the authorization URL for redirecting the officer.
     """
-
-    # Use HTTPS for production, HTTP for local development
-    protocol = "https" if not settings.DEBUG else "http"
-    callback_url = f"{protocol}://{settings.SITE_URL}/payments/verify/"
+    callback_url = get_callback_url()
 
     url = "https://api.paystack.co/transaction/initialize"
     headers = {
@@ -25,14 +34,12 @@ def initialize_paystack_payment(payment):
         "Content-Type": "application/json"
     }
 
-    # Log basic payment info
     logger.info(
         f"Initializing Paystack payment: reference={payment.reference}, "
         f"officer={payment.officer.staffid}, request_type={payment.request_type}, "
         f"amount={payment.total_amount}"
     )
 
-    # Prepare payload for Paystack
     payload = {
         "email": payment.officer.email,
         "amount": int(round(payment.total_amount * 100)),  # Convert GHS to kobo
@@ -42,7 +49,7 @@ def initialize_paystack_payment(payment):
 
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=10)
-        response.raise_for_status()  # Raise error for HTTP 4xx/5xx
+        response.raise_for_status()
         response_data = response.json()
     except requests.RequestException as e:
         logger.error(f"Network error initializing Paystack payment: {e}", exc_info=True)
@@ -51,7 +58,6 @@ def initialize_paystack_payment(payment):
         logger.error(f"Invalid JSON response from Paystack: {e}", exc_info=True)
         raise Exception("Failed to parse Paystack response")
 
-    # Validate response
     if not response_data.get("status") or "data" not in response_data or "authorization_url" not in response_data["data"]:
         logger.error(f"Paystack initialization failed: {response_data}")
         raise Exception("Failed to initialize Paystack payment")
@@ -65,8 +71,7 @@ def initialize_paystack_payment(payment):
 
 def verify_paystack_signature(request):
     """
-    Verify Paystack webhook signature to ensure the payload is authentic.
-    Uses the 'x-paystack-signature' header.
+    Verify Paystack webhook signature to ensure authenticity.
     Returns True if signature matches, False otherwise.
     """
     signature = request.headers.get("x-paystack-signature", "")
@@ -87,6 +92,6 @@ def verify_paystack_signature(request):
 
 def initiate_paystack_refund(payment: Payment, initiated_by=None):
     """
-    Wrapper for Payment.refund(), keeps service interface.
+    Wrapper for Payment.refund(), keeps service interface consistent.
     """
     return payment.refund(initiated_by=initiated_by)
