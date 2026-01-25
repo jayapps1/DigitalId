@@ -157,8 +157,11 @@ PAYSTACK_SECRET_KEY = "sk_test_4a95174577feab5cb5651c96a51e5dfaf8291e31"
 PAYSTACK_PUBLIC_KEY = "pk_test_67a38a57361436c62a7b74e2c7c3826efb5ca838"
 # base/settings.py
 
-DEBUG = False  # for production
-SITE_URL = "skiliteent.pythonanywhere.com"
+# base/settings.py
+import os
+
+SITE_URL = os.environ.get("SITE_URL", "127.0.0.1:8000")  # fallback to local dev
+
 
 
 from decouple import config
