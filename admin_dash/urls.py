@@ -22,7 +22,6 @@ urlpatterns = [
     path("officer/<str:staffid>/", AdminOfficerDetailView.as_view(), name="admin_officer_detail"),
     path("officer/<str:staffid>/edit/", AdminOfficerEditView.as_view(), name="admin_officer_edit"),
     path("officer/<str:staffid>/delete/", AdminOfficerDeleteView.as_view(), name="admin_officer_delete"),
-    path('api/pending-requests-count/', views.pending_requests_api, name='pending_requests_api'),
     path('bulk-approve-requests/', views.bulk_approve_requests, name='bulk_approve_requests'),
     path("admin/id-requests/", views.admin_id_request_list, name="admin_id_request_list" ),
     path( "admin/id-requests/staff/<str:staffid>/", views.admin_id_request_detail, name="admin_id_request_detail"),

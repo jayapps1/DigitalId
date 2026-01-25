@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from admin_dash.views import pending_requests_api
 
 urlpatterns = [
     path('django-admin/', admin.site.urls),          # default Django admin
@@ -12,6 +13,8 @@ urlpatterns = [
     path("payments/", include("payments.urls", namespace="payments_sys")),
  # officer dashboard
     path('id-card/', include('id_card.urls')),       # QR / ID card
+        # API endpoint for pending requests badge
+    path("api/pending-requests-count/", pending_requests_api, name="pending_requests_api"),
 ]
 
 if settings.DEBUG:
