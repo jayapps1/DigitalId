@@ -4,6 +4,7 @@ from django.conf import settings
 import logging
 import hmac
 import hashlib
+from django.urls import reverse
 
 from payments.models import Payment
 
@@ -11,18 +12,13 @@ logger = logging.getLogger(__name__)
 
 from django.conf import settings
 
+
 def get_callback_url():
     """
-    Returns the full callback URL for Paystack.
-    Uses PythonAnywhere domain if available, otherwise local dev.
+    Returns absolute callback URL for Paystack.
+    Uses BASE_SITE_URL from environment.
     """
-    # Ensure SITE_URL is set in settings or WSGI environment
-    site_url = getattr(settings, "SITE_URL", None) or "skiliteent.pythonanywhere.com"
-
-    # Use HTTPS on PythonAnywhere, otherwise fallback to HTTP for dev
-    protocol = "https" if "pythonanywhere.com" in site_url else "http"
-
-    return f"{protocol}://{site_url}/payments/verify/"
+    return f"{settings.BASE_SITE_URL}{reverse('payments_sys:verify_payment')}"
 
 
 

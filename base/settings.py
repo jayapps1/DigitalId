@@ -14,11 +14,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 
 DEBUG = os.environ.get("DEBUG", "False").lower() in ["true", "1", "yes"]
 
-ALLOWED_HOSTS = [
-    "skiliteent.pythonanywhere.com",
-    "127.0.0.1",
-    "localhost",
-]
+ALLOWED_HOSTS = ["skiliteent.pythonanywhere.com", "127.0.0.1", "localhost", "172.20.10.9"]
 
 
 CSRF_TRUSTED_ORIGINS = [
@@ -29,9 +25,10 @@ CSRF_TRUSTED_ORIGINS = [
 # -------------------------------------------------
 # SITE URL / PROTOCOL
 # -------------------------------------------------
-# Use environment variables if available
-SITE_URL = os.environ.get("SITE_URL", "skiliteent.pythonanywhere.com")
-SITE_PROTOCOL = "https" if "pythonanywhere.com" in SITE_URL else "http"
+# -------------------------------------------------
+# BASE SITE URL (Single Source of Truth)
+# -------------------------------------------------
+BASE_SITE_URL = os.environ.get("BASE_SITE_URL", "http://127.0.0.1:8000")
 
 
 # -------------------------------------------------
