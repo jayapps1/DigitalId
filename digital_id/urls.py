@@ -21,6 +21,7 @@ urlpatterns = [
     path("notifications/bulk-delete/", views.bulk_delete_notifications, name="bulk_delete_notifications"),
     path('notifications/ajax/mark-as-read/<int:pk>/', views.mark_as_read, name='ajax_mark_as_read'),
     path('notifications/ajax/unread-count/', views.get_unread_count, name='ajax_unread_count'),
+    path('about/', views.about, name='about'),
     
 
     

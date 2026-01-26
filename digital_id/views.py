@@ -456,3 +456,20 @@ def get_unread_count(request):
     """Return unread notifications count via AJAX."""
     count = Notification.objects.filter(user=request.user, is_read=False).count()
     return JsonResponse({'unread_count': count})
+
+
+
+@login_required
+def about(request):
+    """
+    Renders the About Digital ID page for logged-in officers only.
+    """
+    # Check if user is an officer (assuming officers have a staffid)
+    if not hasattr(request.user, 'staffid') or not request.user.staffid:
+        # Redirect non-officers (admins, public, etc.) to their dashboard or home
+        if request.user.is_staff or request.user.is_superuser:
+            return redirect('admin_dash:home')
+        else:
+            return redirect('digital_id:login')
+
+    return render(request, 'about.html')

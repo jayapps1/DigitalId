@@ -16,32 +16,32 @@
 
         <!-- Admin Links -->
        <ul class="nav">
-    <li class="nav-item">
-        <a class="nav-link gnfs-link" href="{% url 'digital_id:register_officer' %}">Register Officer</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link gnfs-link" href="{% url 'digital_id:import_officer' %}">Import Officer</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link gnfs-link position-relative" href="{% url 'admin_dash:admin_id_request_list' %}">
-            Approve Requests
-            {% if pending_requests_count > 0 %}
-                <span class="badge bg-danger position-absolute top-0 start-100 translate-middle">
-                    {{ pending_requests_count }}
-                </span>
-            {% endif %}
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link gnfs-link" href="{% url 'admin:index' %}">Django Admin</a>
-    </li>
+         <li class="nav-item">
+             <a class="nav-link gnfs-link" href="{% url 'digital_id:register_officer' %}">Register Officer</a>
+         </li>
+         <li class="nav-item">
+             <a class="nav-link gnfs-link" href="{% url 'digital_id:import_officer' %}">Import Officer</a>
+         </li>
+         <li class="nav-item">
+             <a class="nav-link gnfs-link position-relative" href="{% url 'admin_dash:admin_id_request_list' %}">
+                 Approve Requests
+                 {% if pending_requests_count > 0 %}
+                     <span class="badge bg-danger position-absolute top-0 start-100 translate-middle">
+                         {{ pending_requests_count }}
+                     </span>
+                 {% endif %}
+             </a>
+         </li>
+         <li class="nav-item">
+             <a class="nav-link gnfs-link" href="{% url 'admin:index' %}">Django Admin</a>
+         </li>
 
-    {% if user.staffid %}
-        <li class="nav-item">
-            <a class="nav-link gnfs-link" href="{% url 'officers_dash:dashboard' %}">Officer Dashboard</a>
-        </li>
-    {% endif %}
-</ul>
+         {% if user.staffid %}
+             <li class="nav-item">
+                 <a class="nav-link gnfs-link" href="{% url 'officers_dash:dashboard' %}">Officer Dashboard</a>
+             </li>
+         {% endif %}
+       </ul>
 
       </div>
     </nav>
@@ -81,11 +81,16 @@
           {% else %}
             <li class="nav-item"><a class="nav-link gnfs-link" href="{% url 'officers_dash:dashboard' %}">Home</a></li>
           {% endif %}
+
+          <!-- Officer-only About link -->
+          {% if user.staffid %}
+            <li class="nav-item"><a class="nav-link gnfs-link" href="{% url 'digital_id:about' %}">About</a></li>
+          {% endif %}
+
+          <li class="nav-item"><a class="nav-link gnfs-link" href="#">Contact Us</a></li>
         {% else %}
           <li class="nav-item"><a class="nav-link gnfs-link" href="{% url 'digital_id:login' %}">Home</a></li>
         {% endif %}
-        <li class="nav-item"><a class="nav-link gnfs-link" href="#">About</a></li>
-        <li class="nav-item"><a class="nav-link gnfs-link" href="#">Contact Us</a></li>
       </ul>
 
       <!-- CENTER SEARCH (STAFF/SUPERUSER ONLY) -->
@@ -225,9 +230,6 @@
                   <a class="dropdown-item" href="{% url 'officers_dash:officer_detail' user.staffid %}">View My Details</a>
                 {% endif %}
               </li>
-
-              <!-- Officer Dashboard for admins who are officers -->
-             
 
               <li>
                 <a class="dropdown-item" href="{% url 'digital_id:change_password' %}">Change Password</a>
