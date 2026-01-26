@@ -1,16 +1,15 @@
 # payments/paystack_service.py
+
 import requests
-from django.conf import settings
 import logging
 import hmac
 import hashlib
+from django.conf import settings
 from django.urls import reverse
 
 from payments.models import Payment
 
 logger = logging.getLogger(__name__)
-
-from django.conf import settings
 
 
 def get_callback_url():
@@ -19,7 +18,6 @@ def get_callback_url():
     Uses BASE_SITE_URL from environment.
     """
     return f"{settings.BASE_SITE_URL}{reverse('payments_sys:verify_payment')}"
-
 
 
 def initialize_paystack_payment(payment: Payment):
