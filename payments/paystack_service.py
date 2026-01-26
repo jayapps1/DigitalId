@@ -12,18 +12,18 @@ from payments.models import Payment
 logger = logging.getLogger(__name__)
 
 
-def get_callback_url():
+def get_callback_url() -> str:
     """
-    Returns absolute callback URL for Paystack.
-    Uses BASE_SITE_URL from environment.
+    Returns the absolute callback URL for Paystack payments.
+    Uses BASE_SITE_URL from environment and Django reverse.
     """
     return f"{settings.BASE_SITE_URL}{reverse('payments_sys:verify_payment')}"
 
 
-def initialize_paystack_payment(payment: Payment):
+def initialize_paystack_payment(payment: Payment) -> str:
     """
     Initialize a Paystack transaction for the given Payment object.
-    Returns the authorization URL for redirecting the officer.
+    Returns the authorization URL to redirect the officer.
     """
     callback_url = get_callback_url()
 
@@ -33,18 +33,18 @@ def initialize_paystack_payment(payment: Payment):
         "Content-Type": "application/json"
     }
 
-    logger.info(
-        f"Initializing Paystack payment: reference={payment.reference}, "
-        f"officer={payment.officer.staffid}, request_type={payment.request_type}, "
-        f"amount={payment.total_amount}"
-    )
-
     payload = {
         "email": payment.officer.email,
         "amount": int(round(payment.total_amount * 100)),  # Convert GHS to kobo
         "reference": payment.reference,
         "callback_url": callback_url
     }
+
+    logger.info(
+        f"Initializing Paystack payment: reference={payment.reference}, "
+        f"officer={payment.officer.staffid}, request_type={payment.request_type}, "
+        f"amount={payment.total_amount}"
+    )
 
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=10)
@@ -68,7 +68,7 @@ def initialize_paystack_payment(payment: Payment):
     return auth_url
 
 
-def verify_paystack_signature(request):
+def verify_paystack_signature(request) -> bool:
     """
     Verify Paystack webhook signature to ensure authenticity.
     Returns True if signature matches, False otherwise.
