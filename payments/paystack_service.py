@@ -1,31 +1,36 @@
-# payments/paystack_service.py
-
 import requests
+from django.conf import settings
 import logging
 import hmac
 import hashlib
-from django.conf import settings
 from django.urls import reverse
 
 from payments.models import Payment
 
 logger = logging.getLogger(__name__)
 
-
-def get_callback_url() -> str:
+# -------------------------------
+# Callback URL
+# -------------------------------
+def get_callback_url(payment: Payment) -> str:
     """
-    Returns the absolute callback URL for Paystack payments.
-    Uses BASE_SITE_URL from environment and Django reverse.
+    Returns the full callback URL for Paystack for a given Payment object.
+    Includes query parameters for trxref and reference.
+    Always uses HTTPS for production.
     """
-    return f"{settings.BASE_SITE_URL}{reverse('payments_sys:verify_payment')}"
+    domain = "https://skiliteent.pythonanywhere.com"  # Your actual domain
+    path = reverse("payments_sys:verify_payment")      # Django URL name for verify_payment view
+    return f"{domain}{path}?trxref={payment.reference}&reference={payment.reference}"
 
-
+# -------------------------------
+# Initialize Paystack Payment
+# -------------------------------
 def initialize_paystack_payment(payment: Payment) -> str:
     """
     Initialize a Paystack transaction for the given Payment object.
-    Returns the authorization URL to redirect the officer.
+    Returns the authorization URL for redirecting the officer.
     """
-    callback_url = get_callback_url()
+    callback_url = get_callback_url(payment)
 
     url = "https://api.paystack.co/transaction/initialize"
     headers = {
@@ -33,18 +38,18 @@ def initialize_paystack_payment(payment: Payment) -> str:
         "Content-Type": "application/json"
     }
 
+    logger.info(
+        f"Initializing Paystack payment: reference={payment.reference}, "
+        f"officer={payment.officer.staffid}, request_type={payment.request_type}, "
+        f"amount={payment.total_amount}"
+    )
+
     payload = {
         "email": payment.officer.email,
         "amount": int(round(payment.total_amount * 100)),  # Convert GHS to kobo
         "reference": payment.reference,
         "callback_url": callback_url
     }
-
-    logger.info(
-        f"Initializing Paystack payment: reference={payment.reference}, "
-        f"officer={payment.officer.staffid}, request_type={payment.request_type}, "
-        f"amount={payment.total_amount}"
-    )
 
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=10)
@@ -67,11 +72,13 @@ def initialize_paystack_payment(payment: Payment) -> str:
 
     return auth_url
 
-
+# -------------------------------
+# Verify Webhook Signature
+# -------------------------------
 def verify_paystack_signature(request) -> bool:
     """
-    Verify Paystack webhook signature to ensure authenticity.
-    Returns True if signature matches, False otherwise.
+    Verify Paystack webhook signature to ensure the payload is authentic.
+    Uses the 'x-paystack-signature' header.
     """
     signature = request.headers.get("x-paystack-signature", "")
     if not signature:
@@ -88,7 +95,9 @@ def verify_paystack_signature(request) -> bool:
     logger.info("Paystack webhook signature verified successfully")
     return True
 
-
+# -------------------------------
+# Optional: Initiate Refund
+# -------------------------------
 def initiate_paystack_refund(payment: Payment, initiated_by=None):
     """
     Wrapper for Payment.refund(), keeps service interface consistent.
