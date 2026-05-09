@@ -1,4 +1,7 @@
 {% extends "main.html" %}
+{% block title%}
+    SearchResults
+{% endblock title%}
 {% load static %}
 
 {% block content %}
@@ -27,7 +30,7 @@
         <div class="card-body">
           <h4 class="card-title gnfs-text">{{ officer.firstname }} {{ officer.lastname }}</h4>
           <h6 class="card-subtitle mb-2 gnfs-subtext">{{ officer.rank }}</h6>
-          
+
           <ul class="list-group list-group-flush gnfs-list mt-3">
             <li class="list-group-item"><strong>Staff ID:</strong> {{ officer.staffid}}</li>
             <li class="list-group-item"><strong>Service Number:</strong> {{ officer.service_number|default:"—" }}</li>

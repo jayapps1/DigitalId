@@ -60,16 +60,13 @@ def forgot_password(request):
         # Send OTP via ArkAcel SMS
         sms_message = f"Your GNFS OTP is {otp}. It is valid for 5 minutes."
         sms_result = send_sms(phone_input, sms_message)
-        print("SEND_SMS RESULT:", sms_result)  # log API response
+        print("SEND_SMS RESULT:", sms_result)  # debug log
 
-        # Robust success check
-        sms_data = sms_result.get("data", "") or ""
-        sms_data_clean = sms_data.strip()
-
-        if sms_result.get("success") or sms_data_clean.startswith("1701"):
+        # Proper success check (no string manipulation)
+        if sms_result.get("success"):
             messages.success(request, "OTP sent to your registered phone number.")
         else:
-            # Log for debugging, but don’t show warning to users
+            # Log error but don't expose technical details to user
             print("SMS Error Response:", sms_result)
             messages.success(
                 request,
@@ -78,11 +75,13 @@ def forgot_password(request):
 
         # Store user in session
         request.session["reset_user"] = user.staffid
+
         return redirect("password_reset:verify_otp")
 
     # Form invalid
     print("FORM ERRORS:", form.errors)
     return render(request, "password_reset/forgot_password.html", {"form": form})
+
 
 
 # -------------------------------------------------

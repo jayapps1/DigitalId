@@ -9,14 +9,11 @@
 
 <style>
 * { box-sizing: border-box; }
-
 html, body {
-    margin: 0;
-    padding: 0;
+    margin: 0; padding: 0;
     background: #f8f9fa;
     font-family: Arial, Helvetica, sans-serif;
 }
-
 .id-card-wrapper {
     min-height: 100vh;
     display: flex;
@@ -25,8 +22,6 @@ html, body {
     align-items: center;
     gap: 10mm;
 }
-
-/* CR80 card container with radius */
 .card-container {
     position: relative;
     width: 85.6mm;
@@ -34,22 +29,15 @@ html, body {
     border-radius: 3mm;
     overflow: hidden;
     box-shadow: 0 0 5px rgba(0,0,0,0.1);
-
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
-
-/* Card background images */
 .id-card-img {
     width: 100%;
     height: 100%;
     display: block;
     object-fit: cover;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
 }
-
-/* Content safe zone */
 .content-layer {
     position: absolute;
     top: 15mm;
@@ -61,22 +49,31 @@ html, body {
     font-size: 7pt;
     z-index: 2;
     align-items: flex-start;
-
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
 }
-
-/* PHOTO */
-.photo-block { width: 20mm; text-align: center; }
-.photo-block img { width: 18mm; height: 24mm; object-fit: cover; border-radius: 1mm; }
-.service-number { margin-top: 1mm; font-size: 6pt; font-weight: 700; }
-
-/* DETAILS */
-.details { flex: 1; text-transform: uppercase; font-size: 7pt; line-height: 1.25; color: #000; }
+.photo-block {
+    width: 20mm;
+    text-align: center;
+}
+.photo-block img {
+    width: 18mm;
+    height: 20mm;
+    object-fit: cover;
+    border-radius: 1mm;
+}
+.service-number {
+    margin-top: 1mm;
+    font-size: 6pt;
+    font-weight: 700;
+}
+.details {
+    flex: 1;
+    text-transform: uppercase;
+    font-size: 7pt;
+    line-height: 1.25;
+    color: #000;
+}
 .details div { margin-bottom: 1mm; }
-
-/* QR CODE (Back only) */
-.qr-block {
+.front-qr-block {
     position: absolute;
     bottom: 10mm;
     right: 2mm;
@@ -84,22 +81,36 @@ html, body {
     height: 15mm;
     z-index: 3;
 }
-.qr-block img {
+.front-qr-block img {
     width: 100%;
     height: 100%;
     object-fit: contain;
+    image-rendering: pixelated;
 }
-
-/* PRINT BUTTONS */
+.qr-block {
+    position: absolute;
+    bottom: 9mm;
+    right: 4mm;
+    width: 20mm;
+    height: 20mm;
+    background: transparent;
+    padding: 0;
+    z-index: 3;
+}
+.qr-block img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    object-fit: fill;
+}
 .buttons-wrapper { margin-top: 14px; }
-
 @media print {
-    @page { 
-        size: 85.6mm 53.98mm; 
-        margin: 0; 
+    @page {
+        size: 85.6mm 53.98mm;
+        margin: 0;
     }
-
-    html, body { 
+    html, body {
         width: 85.6mm;
         height: 53.98mm;
         margin: 0;
@@ -107,13 +118,11 @@ html, body {
         background: #fff;
         overflow: hidden;
     }
-
     .buttons-wrapper { display: none !important; }
 }
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
 <script>
 function printCard(cardId) {
     const originalContents = document.body.innerHTML;
@@ -123,37 +132,39 @@ function printCard(cardId) {
     document.body.innerHTML = originalContents;
 }
 
-// Save ID card as PNG in exact CR80 size (300 DPI)
 function saveCardAsPNG(cardId) {
     const card = document.getElementById(cardId);
+    const serviceNumber = "{{ profile.user.service_number|default:profile.user.staffid|default:'-' }}";
+    const filename = serviceNumber + (cardId === 'back-card' ? '_backid' : '_frontid') + '.PNG';
 
-    // CR80 dimensions at 300 DPI
-    const widthPx = 1011; // 85.6mm
-    const heightPx = 638; // 53.98mm
+    const widthPx = 1011;  // 85.6mm at 300 DPI
+    const heightPx = 638;  // 53.98mm at 300 DPI
 
-    html2canvas(card, { width: card.offsetWidth, height: card.offsetHeight, scale: widthPx / card.offsetWidth }).then(canvas => {
-        // Resize canvas to exact CR80 size
+    html2canvas(card, {
+        scale: 3,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false
+    }).then(canvas => {
         const finalCanvas = document.createElement('canvas');
         finalCanvas.width = widthPx;
         finalCanvas.height = heightPx;
         const ctx = finalCanvas.getContext('2d');
         ctx.drawImage(canvas, 0, 0, widthPx, heightPx);
-
         const link = document.createElement('a');
-        link.download = cardId + '.png';
+        link.download = filename;
         link.href = finalCanvas.toDataURL("image/png");
         link.click();
     });
 }
 </script>
-
 </head>
 <body>
 
 <div class="id-card-wrapper">
 
-     <!-- BACK BUTTON -->
-    <div class="back-btn">
+    <!-- BACK BUTTON -->
+    <div class="back-btn mb-2">
         {% if user.is_staff or user.is_superuser %}
             <a href="{% url 'admin_dash:home' %}" class="btn btn-secondary">&larr; Back to Admin Dashboard</a>
         {% else %}
@@ -171,17 +182,34 @@ function saveCardAsPNG(cardId) {
                 {% else %}
                     <div style="font-size:6pt;">NO PHOTO</div>
                 {% endif %}
-                <div class="service-number">{{ profile.user.service_number|default:"-" }}</div>
+                <div class="service-number">
+                    <strong>
+                        <span style="color:#c00000;font-weight:700;">
+                            {{ profile.user.service_number|default:"-"|upper }}
+                        </span>
+                    </strong>
+                </div>
             </div>
             <div class="details">
                 <div><strong>NAME:</strong> {{ profile.user.firstname|default:"-" }} {{ profile.user.lastname|default:"-" }}</div>
                 <div><strong>RANK:</strong> {{ profile.get_rank_display|default:"-" }}</div>
                 <div><strong>STATION:</strong> {{ profile.station|default:"-" }}</div>
                 <div><strong>BLOOD GROUP:</strong> {{ profile.blood_group|default:"-" }}</div>
-                <div><strong>EMG CONTACT #:</strong> {{ profile.user.phone|default:"-" }}</div>
-                <div><strong>EXPIRY:</strong> <span style="color:#c00000;font-weight:700;">{% if profile.qr_expiry_date %}{{ profile.qr_expiry_date|date:"d M Y" }}{% else %}-{% endif %}</span></div>
+                <div><strong>EMG NUM #:</strong> {{ profile.user.phone|default:"-" }}</div>
+                <div><strong>EXPIRY:</strong>
+                    <span style="color:#c00000;font-weight:700;">
+                        {% if profile.qr_expiry_date %}{{ profile.qr_expiry_date|date:"d M Y" }}{% else %}-{% endif %}
+                    </span>
+                </div>
             </div>
         </div>
+
+        <!-- FRONT QR CODE (vCard) -->
+        {% if profile.front_qr_image %}
+        <div class="front-qr-block">
+            <img src="{{ profile.front_qr_image.url }}" alt="Front QR Code">
+        </div>
+        {% endif %}
     </div>
 
     <!-- BACK CARD -->
@@ -195,7 +223,7 @@ function saveCardAsPNG(cardId) {
     </div>
 
     <!-- PRINT & SAVE BUTTONS -->
-    <div class="buttons-wrapper">
+    <div class="buttons-wrapper text-center">
         <button class="btn btn-primary" onclick="printCard('front-card')">Print Front Card</button>
         <button class="btn btn-secondary" onclick="printCard('back-card')">Print Back Card</button>
         <button class="btn btn-success" onclick="saveCardAsPNG('front-card')">Save Front as PNG</button>

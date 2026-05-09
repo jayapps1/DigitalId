@@ -1,4 +1,7 @@
 {% extends "main.html" %}
+{% block title%}
+    OfficerEdit
+{% endblock title%}
 {% load widget_tweaks %}
 {% load static %}
 
@@ -15,14 +18,22 @@
     </div>
 
     <!-- Page Title -->
+    <style>
+        .gradient-text {
+            background: linear-gradient(90deg, #FDBB30 0%, #F57920 50%, #D71920 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+    </style>
+
     <div class="text-center mb-5">
-        <h2 class="fw-bold gradient-text">
-            {% if user.is_staff or user.is_superuser %}
-                Edit Officer Details (Admin)
-            {% else %}
-                Edit My Details
-            {% endif %}
-        </h2>
+        <h1 class="fw-bold gradient-text display-5">
+            {% if user.is_staff or user.is_superuser %} Edit Officer Details {% else %} Edit My Details {% endif %}
+        </h1>
         <p class="text-muted fs-5 text-uppercase">
             {{ object.firstname }} {{ object.lastname }} — Staff ID: {{ object.staffid }}
         </p>
@@ -46,15 +57,17 @@
                         {% csrf_token %}
                         <input type="hidden" name="cropped_photo" id="croppedPhoto">
 
+                        <!-- Profile Photo (Top Only) -->
+                        <div class="mb-4 text-center">
+                            {% include "digital_id/profile_image_field.html" with preview_id="photoPreview" field=form.photo initial_url=photo_url label="Change Profile Picture"  hidden_input_name="cropped_photo" hidden_input_id="croppedPhoto" %}
+                        </div>
+
                         <div class="row g-4">
-                                  <!-- Profile Photo -->
-                                <div class="mb-4 text-center">
-                                    {% include "digital_id/profile_image_field.html" with preview_id="photoPreview" field=form.photo initial_url=photo_url label="Change Profile Picture" hidden_input_name="cropped_photo" hidden_input_id="croppedPhoto" %}
-                                </div>
-                            <!-- LEFT COLUMN: 5 fields -->
+
+                            <!-- LEFT COLUMN -->
                             <div class="col-md-6">
                                 {% for field in form %}
-                                    {% if field.name in "firstname lastname email phone gender" %}
+                                    {% if field.name == "firstname" or field.name == "lastname" or field.name == "email" or field.name == "phone" or field.name == "emergency_contact" or field.name == "gender" or field.name == "district" %}
                                         <div class="mb-3">
                                             <label class="form-label fw-semibold">{{ field.label }}</label>
                                             {{ field|add_class:"form-control text-uppercase" }}
@@ -63,20 +76,19 @@
                                 {% endfor %}
                             </div>
 
-                            <!-- RIGHT COLUMN: Profile photo + 5 fields -->
+                            <!-- RIGHT COLUMN -->
                             <div class="col-md-6">
-
-                              
-
                                 {% for field in form %}
-                                    {% if field.name in "ghcard blood_group region rank station service_number" %}
+                                    {% if field.name == "ghcard" or field.name == "blood_group" or field.name == "region" or field.name == "rank" or field.name == "service_number" or field.name == "station" %}
                                         <div class="mb-3">
                                             <label class="form-label fw-semibold">{{ field.label }}</label>
-
-                                            {% if field.name in "rank station" %}
-                                                {{ field|add_class:"form-select text-uppercase" }}
-                                            {% elif field.name == "service_number" %}
-                                                {{ field|add_class:"form-control text-uppercase"|attr:"readonly:true" }}
+                                            {% if field.name == "blood_group" or field.name == "rank" or field.name == "region" or field.name == "station" %}
+                                                {{ field|add_class:"form-select text-uppercase select2" }}
+                                                {% if field.name == "station" %}
+                                                    <small class="d-block mt-1" style="color: #D71920;">
+                                                        Type or select the fire station
+                                                    </small>
+                                                {% endif %}
                                             {% else %}
                                                 {{ field|add_class:"form-control text-uppercase" }}
                                             {% endif %}
@@ -84,7 +96,24 @@
                                     {% endif %}
                                 {% endfor %}
 
+
+
                             </div>
+                               <!-- Admin Role (Radio Buttons for superadmins) -->
+                            {% if form.admin_roles %}
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">
+                                        {{ form.admin_roles.label }}
+                                    </label>
+                                    {{ form.admin_roles }}
+                                    <small class="d-block mt-1 text-muted">
+                                        Only visible to superadmins
+                                    </small>
+                                </div>
+                            </div>
+                            {% endif %}
+
 
                         </div>
 
@@ -105,33 +134,21 @@
     </div>
 </div>
 
-<style>
-.gnfs-btn-back {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    color: #2E2E2E;
-    background-color: #A7D8DE;
-    border-radius: 0.5rem;
-    text-decoration: none;
-    transition: all 0.3s ease;
-}
-.gnfs-btn-back:hover { background-color: #92c8d2; color: #1f1f1f; }
-
-.gradient-text {
-    background: linear-gradient(90deg, #FDBB30, #F57920);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-    font-weight: 700;
-}
-</style>
+<!-- Select2 CSS & JS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
+$(document).ready(function() {
+    $('.select2').select2({
+        placeholder: "Type or select...",
+        allowClear: true,
+        width: '100%'
+    });
     initCropper("id_photo", "photoPreview", "croppedPhoto");
 });
 </script>
+
 
 {% endblock %}

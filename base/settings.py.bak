@@ -1,0 +1,104 @@
+import os
+from pathlib import Path
+
+# -------------------------------------------------
+# BASE DIRECTORY
+# -------------------------------------------------
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# -------------------------------------------------
+# SECURITY SETTINGS
+# -------------------------------------------------
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-default-key")
+DEBUG = os.environ.get("DEBUG", "False").lower() in ["true", "1", "yes"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "172.20.10.9", "skiliteent.pythonanywhere.com"]
+
+# -------------------------------------------------
+# SITE URL / PROTOCOL
+# -------------------------------------------------
+BASE_SITE_URL = os.environ.get("BASE_SITE_URL", "http://127.0.0.1:8000")
+
+# -------------------------------------------------
+# PAYSTACK SETTINGS
+# -------------------------------------------------
+PAYSTACK_SECRET_KEY = os.environ.get("PAYSTACK_SECRET_KEY", "sk_test_default")
+PAYSTACK_PUBLIC_KEY = os.environ.get("PAYSTACK_PUBLIC_KEY", "pk_test_default")
+
+# -------------------------------------------------
+# EMAIL SETTINGS (GMAIL SMTP)
+# -------------------------------------------------
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get("EMAIL_USER", "yourgmail@gmail.com")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_PASSWORD", "your_app_password")
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# -------------------------------------------------
+# APPLICATIONS
+# -------------------------------------------------
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.humanize',
+
+    # Your apps
+    'digital_id',
+    'admin_dash',
+    'id_card',
+    'officers_dash',
+    'password_reset',
+    'payments',
+
+    # Third-party
+    'widget_tweaks',
+    'rest_framework',
+]
+
+# -------------------------------------------------
+# MIDDLEWARE
+# -------------------------------------------------
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+# -------------------------------------------------
+# URL CONFIG
+# -------------------------------------------------
+ROOT_URLCONF = 'base.urls'
+
+# -------------------------------------------------
+# TEMPLATES
+# -------------------------------------------------
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+                'digital_id.context_processors.notifications',
+                'digital_id.context_processors.pending_requests_count',
+            ],
+        },
+    },
+]
+
+# -------------------------------------------------
+# WSGI
+# -------------------------------------------------
+WSGI_APPLICATION = 'base.wsgi.application'

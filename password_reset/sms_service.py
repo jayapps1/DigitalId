@@ -11,7 +11,7 @@ def send_sms(phone: str, message: str) -> dict:
 
     Returns:
         dict: 
-            On success: {"success": True, "data": str}
+            On success: {"success": True, "data": dict}
             On failure: {"success": False, "error": str}
     """
     url = "https://sms.arkesel.com/sms/api"
@@ -19,8 +19,8 @@ def send_sms(phone: str, message: str) -> dict:
     params = {
         "action": "send-sms",
         "api_key": getattr(settings, "ARKESEL_API_KEY", ""),
-        "to": phone,              # Recipient number in E.164
-        "from": "KomendaFS",      # Must be pre-approved in ArkAcel
+        "to": phone,
+        "from": "KomendaFS",
         "sms": message,
     }
 
@@ -29,17 +29,19 @@ def send_sms(phone: str, message: str) -> dict:
 
     try:
         response = requests.get(url, params=params, timeout=15)
-        text = response.text.strip()  # Clean whitespace/newlines
+        response.raise_for_status()  # Raise exception for HTTP errors
 
-        # Check HTTP status
-        if response.status_code != 200:
-            return {"success": False, "error": f"HTTP {response.status_code}: {text}"}
+        # Try to parse JSON response
+        try:
+            data = response.json()
+        except ValueError:
+            return {"success": False, "error": f"Invalid response: {response.text}"}
 
-        # ArkAcel success code starts with 1701
-        if text.startswith("1701"):
-            return {"success": True, "data": text}
+        # Check API success code
+        if data.get("code") == "ok":
+            return {"success": True, "data": data}
         else:
-            return {"success": False, "error": f"API returned error: {text}"}
+            return {"success": False, "error": data.get("message", "Unknown error")}
 
     except requests.RequestException as e:
         return {"success": False, "error": f"Request exception: {str(e)}"}

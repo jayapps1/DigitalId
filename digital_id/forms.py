@@ -5,6 +5,7 @@ from .models import User, OfficerProfile
 from django.db import transaction
 from django.db.models import Q
 from django.contrib.auth import get_user_model
+from .constants import FIRE_STATION_CHOICES
 
 
 User = get_user_model()
@@ -37,6 +38,27 @@ class OfficerImportForm(forms.ModelForm):
         )
 
         return user
+
+#contac us
+
+from .models import ContactMessage
+
+class ContactMessageForm(forms.ModelForm):
+    class Meta:
+        model = ContactMessage
+        fields = ['subject', 'message', 'image']  # added 'image'
+        widgets = {
+            'subject': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter subject'
+            }),
+            'message': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Write your message here'
+            }),
+        }
+
 
 
 
@@ -81,33 +103,31 @@ class IDRequestForm(forms.ModelForm):
             )
 
         return cleaned_data
-    
 
-    
+
+
 class AdminOfficerRegistrationForm(forms.ModelForm):
-    # OfficerProfile fields
-    station = forms.CharField(
-        max_length=150,
+    role = forms.ChoiceField(
+        choices=User.ROLE_CHOICES,
         required=True,
-        label="Station",
-        widget=forms.TextInput(attrs={"placeholder": "Enter station", "class": "form-control text-uppercase"})
+        label="Role",
+        widget=forms.Select(attrs={"class": "form-select text-uppercase"})
     )
 
-    region = forms.CharField(
-        max_length=100,
+    station = forms.ChoiceField(
+        choices=FIRE_STATION_CHOICES,  # default, will override in __init__
         required=True,
-        label="Region",
-        widget=forms.TextInput(attrs={"placeholder": "Enter region", "class": "form-control text-uppercase"})
+        label="Station",
+        widget=forms.Select(attrs={"class": "form-select text-uppercase"})
     )
 
     rank = forms.ChoiceField(
         choices=OfficerProfile._meta.get_field("rank").choices,
         required=True,
         label="Rank",
-        widget=forms.Select(attrs={"class": "form-select"})
+        widget=forms.Select(attrs={"class": "form-select text-uppercase"})
     )
 
-    # Optional password
     password = forms.CharField(
         label="Initial Password (optional)",
         widget=forms.PasswordInput(attrs={"placeholder": "Leave blank for default"}),
@@ -119,15 +139,8 @@ class AdminOfficerRegistrationForm(forms.ModelForm):
         required=False
     )
 
-    # Staff/Superuser checkboxes
-    is_staff = forms.BooleanField(
-        required=False,
-        label="Staff Status (Can access admin)"
-    )
-    is_superuser = forms.BooleanField(
-        required=False,
-        label="Superuser Status (Full admin privileges)"
-    )
+    is_staff = forms.BooleanField(required=False, label="Staff Status (Can access admin)")
+    is_superuser = forms.BooleanField(required=False, label="Superuser Status (Full admin privileges)")
 
     class Meta:
         model = User
@@ -139,6 +152,7 @@ class AdminOfficerRegistrationForm(forms.ModelForm):
             "gender",
             "role",
             "region",
+            "phone",
             "district",
             "is_staff",
             "is_superuser",
@@ -147,60 +161,122 @@ class AdminOfficerRegistrationForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
+
+        # Bootstrap classes
         for field in self.fields.values():
             if isinstance(field.widget, forms.Select):
-                field.widget.attrs.update({"class": "form-select"})
+                field.widget.attrs.update({"class": "form-select text-uppercase"})
             else:
-                field.widget.attrs.update({"class": "form-control"})
+                field.widget.attrs.update({"class": "form-control text-uppercase"})
 
-        # Only show `is_superuser` checkbox if current user is superuser
+        # Only superusers can see superuser checkbox
         if self.request and not self.request.user.is_superuser:
-            self.fields.pop("is_superuser")
+            self.fields.pop("is_superuser", None)
 
+        # ----------------------
+        # Role-based station/region
+        # ----------------------
+        if self.request:
+            current_user = self.request.user
+
+            # Superuser sees all
+            if current_user.is_superuser:
+                self.fields["station"].choices = FIRE_STATION_CHOICES
+                self.fields["region"].choices = User.REGION_CHOICES
+                self.fields["role"].choices = User.ROLE_CHOICES
+
+            # Regional Admin sees only stations in their region
+            # Regional Admin sees all stations (dropdown should not be empty)
+            elif current_user.role == "REGIONAL_ADMIN":
+                self.fields["region"].initial = current_user.region
+                self.fields["region"].widget.attrs["readonly"] = True
+                # Show all stations for live selection
+                self.fields["station"].choices = FIRE_STATION_CHOICES
+                # Allowed roles for regional admin
+                self.fields["role"].choices = [
+                    ("OFFICER", "Officer"),
+                    ("STATION_ADMIN", "Station Admin"),
+                    ("REGIONAL_ADMIN", "Regional Admin"),
+                ]
+
+
+            # Station Admin sees only their station
+            elif current_user.role == "STATION_ADMIN":
+                self.fields["region"].initial = current_user.region
+                self.fields["region"].widget.attrs["readonly"] = True
+                self.fields["station"].initial = current_user.profile.station
+                self.fields["station"].widget.attrs["readonly"] = True
+                # Allowed roles for station admin
+                self.fields["role"].choices = [
+                    ("OFFICER", "Officer"),
+                    ("STATION_ADMIN", "Station Admin"),
+                ]
+
+            # Other roles cannot register
+            else:
+                raise PermissionError("You do not have permission to register officers.")
+
+    # -------------------------
+    # Clean methods
+    # -------------------------
     def clean_staffid(self):
         return self.cleaned_data.get("staffid", "").upper().strip()
 
     def clean_station(self):
-        return self.cleaned_data.get("station", "").strip().upper()
+        station = self.cleaned_data.get("station")
+        return station.upper() if station else station
 
     def clean_region(self):
-        return self.cleaned_data.get("region", "").strip().upper()
+        region = self.cleaned_data.get("region")
+        return region.upper() if region else region
 
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         password_confirm = cleaned_data.get("password_confirm")
+
         if password or password_confirm:
             if password != password_confirm:
                 raise forms.ValidationError("Passwords do not match")
+
+        # Prevent non-superadmins from creating superusers
+        if self.request:
+            current_user = self.request.user
+            if current_user.role in ["STATION_ADMIN", "REGIONAL_ADMIN"]:
+                if cleaned_data.get("is_superuser"):
+                    raise forms.ValidationError("Only superusers can create other superusers.")
+
         return cleaned_data
 
+    # -------------------------
+    # Save method
+    # -------------------------
     def save(self, commit=True):
         with transaction.atomic():
             user = super().save(commit=False)
-            password = self.cleaned_data.get("password") or "Officer@123"
-            user.set_password(password)
+            user.set_password(self.cleaned_data.get("password") or "Officer@123")
 
-            # Assign staff/superuser
-            user.is_staff = self.cleaned_data.get("is_staff", False)
+            # Only superusers can set superuser
             if self.request and self.request.user.is_superuser:
                 user.is_superuser = self.cleaned_data.get("is_superuser", False)
+                user.is_staff = self.cleaned_data.get("is_staff", False)
             else:
                 user.is_superuser = False
+                # Non-superadmins can only set staff if their role allows
+                user.is_staff = self.cleaned_data.get("is_staff", False) if self.request.user.role in ["STATION_ADMIN", "REGIONAL_ADMIN"] else False
 
-            # Save user
             if commit:
                 user.save()
 
-            # Save profile
-            profile, created = OfficerProfile.objects.get_or_create(user=user)
+            # Save OfficerProfile
+            profile, _ = OfficerProfile.objects.get_or_create(user=user)
             profile.station = self.cleaned_data["station"]
             profile.rank = self.cleaned_data["rank"]
             profile.save()
 
-            # Save region to user
+            # Ensure region is saved on user
             user.region = self.cleaned_data["region"]
             if commit:
-                user.save(update_fields=["region"])
+                user.save(update_fields=["region", "is_superuser", "is_staff"])
 
         return user

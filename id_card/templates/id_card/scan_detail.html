@@ -1,0 +1,93 @@
+{% extends "main.html" %}
+{% block title%}
+    ScanDetails
+{% endblock title%}
+{% block content %}
+
+<div class="container my-4">
+
+    <div class="row g-4">
+
+        <!-- Scan Info -->
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header text-white"
+                     style="background:#D71920;">
+                    <h6 class="mb-0">Scan Details</h6>
+                </div>
+
+                <div class="card-body" style="background:#FFFFFF; color:#2E2E2E;">
+                    <p><strong>Officer:</strong>
+                        {{ scan.profile.user.firstname }}
+                        {{ scan.profile.user.lastname }}
+                    </p>
+
+                    <p><strong>Staff ID:</strong>
+                        {{ scan.profile.user.staffid }}
+                    </p>
+
+                    <p><strong>Scanned At:</strong>
+                        {{ scan.scanned_at|date:"d M Y, H:i:s" }}
+                    </p>
+
+                    <p><strong>IP Address:</strong>
+                        {{ scan.ip_address }}
+                    </p>
+
+                    <p><strong>Coordinates:</strong><br>
+                        {% if scan.latitude and scan.longitude %}
+                            <span class="badge"
+                                  style="background:#8BC0A9;">
+                                {{ scan.latitude }}, {{ scan.longitude }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">
+                                Not Available
+                            </span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Section -->
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header"
+                     style="background:#FDBB30;">
+                    <h6 class="mb-0 text-dark">
+                        Location Map
+                    </h6>
+                </div>
+
+                <div class="card-body text-center"
+                     style="background:#A7D8DE;">
+                    {% if scan.latitude and scan.longitude %}
+                        <a target="_blank"
+                           href="https://www.google.com/maps?q={{ scan.latitude }},{{ scan.longitude }}"
+                           class="btn text-white"
+                           style="background:#D71920;">
+                            Open in Google Maps
+                        </a>
+                    {% else %}
+                        <p class="text-muted mb-0">
+                            GPS coordinates not available.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Back Button -->
+    <div class="mt-4">
+        <a href="{% url 'id_card:scan_logs' %}"
+           class="btn btn-outline-dark">
+            ← Back to Scan Logs
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

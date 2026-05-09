@@ -1,16 +1,31 @@
 {% extends "main.html" %}
+{% block title%}
+    AdminHomePage
+{% endblock title%}
 {% block content %}
 
 <h2 class="admin-dashboard-title">Admin Dashboard</h2>
 
-{% if request.user.is_superuser or request.user.is_staff %}
+{% if request.user.is_authenticated %}
 <div class="admin-name-wrapper mb-3">
-    <span class="admin-label">Administrator</span>
+    <span class="admin-label">
+        {% if request.user.is_superuser %}
+            Superuser
+        {% elif request.user.role == "REGIONAL_ADMIN" %}
+            Regional Administrator
+        {% elif request.user.role == "STATION_ADMIN" %}
+            Station Administrator
+        {% elif request.user.is_staff %}
+            Administrator
+        {% endif %}
+    </span>
+
     <h4 class="admin-fullname">
         {{ request.user.first_name }} {{ request.user.last_name }}
     </h4>
 </div>
 {% endif %}
+
 
 <table class="table table-striped table-bordered align-middle">
     <thead class="table-dark">
@@ -22,19 +37,33 @@
             <th>Status</th>
             <th>Leave Type</th>
             <th>Profile / QR</th>
-            <th>Service ID</th>
+            <th>Station</th>
             <th>Actions</th>
             <th>QR Control</th>
         </tr>
     </thead>
     <tbody>
-        {% for officer in officers %}
+    {% for officer in officers %}
         <tr>
-            <!-- Continuous index across pages -->
+            <!-- Continuous index -->
             <td>{{ forloop.counter0|add:start_index|add:1 }}</td>
 
             <td>{{ officer.staffid }}</td>
-            <td class="col-name">{{ officer.firstname }} {{ officer.lastname }}</td>
+
+            <!-- Name with role label and truncated -->
+            <td class="col-name">
+                {{ officer.firstname|truncatechars:22 }} {{ officer.lastname}}
+                {% if officer.is_superuser %}<br>
+                    <small class="text-primary">@superuser</small>
+                {% elif officer.role == "STATION_ADMIN" %}<br>
+                    <small class="text-success">@stationadmin</small>
+                {% elif officer.role == "REGIONAL_ADMIN" %}<br>
+                    <small class="text-warning">@regionadmin</small>
+                {% else %}<br>
+                    <small class="text-muted">@officer</small>
+                {% endif %}
+            </td>
+
             <td>{{ officer.region }}</td>
 
             <!-- Status -->
@@ -69,7 +98,7 @@
                             <span class="text-danger mb-1">No QR</span>
                         {% endif %}
                         {% if officer.profile.service_id %}
-                            <span class="small">{{ officer.profile.service_number }}</span>
+                            <span class="small">{{ officer.profile.service_number}}</span>
                         {% endif %}
                         <a href="{% url 'admin_dash:admin_print_qr' officer.staffid %}" target="_blank"
                            class="btn btn-xs btn-outline-primary qr-print-btn mt-1" title="Print QR">
@@ -82,35 +111,113 @@
                 {% endif %}
             </td>
 
-            <!-- Service ID -->
+            <!-- Station -->
             <td class="text-center">
-                {% if officer.profile and officer.profile.service_id_image %}
-                    <img src="{{ officer.profile.service_id_image.url }}" width="100" class="rounded">
+                {% if officer.profile %}
+                    <span class="fw-semibold text-uppercase">
+                        {{ officer.profile.station|truncatechars:25 }}
+                    </span>
                 {% else %}
-                    <span class="text-danger">No Service ID</span>
+                    <span class="text-danger">No Profile</span>
                 {% endif %}
             </td>
 
             <!-- Actions -->
-            <td class="text-center">
-                <div class="d-flex flex-column align-items-center gap-1">
-                    <a href="{% url 'admin_dash:admin_officer_detail' officer.staffid %}" class="text-info" title="View">
-                        <i class="bi bi-eye-fill fs-5"></i>
-                    </a>
-                    <a href="{% url 'admin_dash:admin_officer_edit' officer.staffid %}" class="text-warning" title="Edit">
+<td class="text-center">
+    <div class="row g-2 justify-content-center">
+
+        <!-- VIEW -->
+        <div class="col-6">
+            <a href="{% url 'admin_dash:admin_officer_detail' officer.staffid %}"
+               class="text-info"
+               title="View">
+                <i class="bi bi-eye-fill fs-5"></i>
+            </a>
+        </div>
+
+        <!-- EDIT -->
+        <div class="col-6">
+            {% if request.user.is_superuser %}
+                <a href="{% url 'admin_dash:admin_officer_edit' officer.staffid %}"
+                   class="text-warning"
+                   title="Edit">
+                    <i class="bi bi-pencil-fill fs-5"></i>
+                </a>
+
+            {% elif request.user.role == "REGIONAL_ADMIN" %}
+                {% if officer.role != "SUPERADMIN" %}
+                    <a href="{% url 'admin_dash:admin_officer_edit' officer.staffid %}"
+                       class="text-warning"
+                       title="Edit">
                         <i class="bi bi-pencil-fill fs-5"></i>
                     </a>
-                    {% if officer != request.user %}
-                        <a href="{% url 'admin_dash:admin_officer_delete' officer.staffid %}" class="text-danger" title="Delete">
-                            <i class="bi bi-trash-fill fs-5"></i>
+                {% endif %}
+
+            {% elif request.user.role == "STATION_ADMIN" %}
+                {% if officer.role not in "SUPERADMIN REGIONAL_ADMIN" %}
+                    <a href="{% url 'admin_dash:admin_officer_edit' officer.staffid %}"
+                       class="text-warning"
+                       title="Edit">
+                        <i class="bi bi-pencil-fill fs-5"></i>
+                    </a>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- ASSIGN ROLE -->
+        <div class="col-6">
+            {% if officer != request.user %}
+                {% if request.user.is_superuser %}
+                    <a href="{% url 'admin_dash:assign_officer_role' %}?officer={{ officer.staffid }}"
+                       class="text-success"
+                       title="Assign Role">
+                        <i class="bi bi-shield-lock-fill fs-5"></i>
+                    </a>
+
+                {% elif request.user.role == "REGIONAL_ADMIN" %}
+                    {% if officer.role != "SUPERADMIN" and officer.region == request.user.region %}
+                        <a href="{% url 'admin_dash:assign_officer_role' %}?officer={{ officer.staffid }}"
+                           class="text-success"
+                           title="Assign Role">
+                            <i class="bi bi-shield-lock-fill fs-5"></i>
                         </a>
-                    {% else %}
-                        <span class="text-muted" title="You cannot delete your own account">
-                            <i class="bi bi-trash-fill fs-5"></i>
-                        </span>
                     {% endif %}
-                </div>
-            </td>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- DELETE -->
+        <div class="col-6">
+            {% if request.user.is_superuser %}
+                {% if officer != request.user %}
+                    <a href="{% url 'admin_dash:admin_officer_delete' officer.staffid %}"
+                       class="text-danger"
+                       title="Delete">
+                        <i class="bi bi-trash-fill fs-5"></i>
+                    </a>
+                {% endif %}
+
+            {% elif request.user.role == "REGIONAL_ADMIN" %}
+                {% if officer.role != "SUPERADMIN" %}
+                    <a href="{% url 'admin_dash:admin_officer_delete' officer.staffid %}"
+                       class="text-danger"
+                       title="Delete">
+                        <i class="bi bi-trash-fill fs-5"></i>
+                    </a>
+                {% endif %}
+
+            {% elif request.user.role == "STATION_ADMIN" %}
+                <span class="text-muted"
+                      title="Station admin cannot delete officers">
+                    <i class="bi bi-trash-fill fs-5"></i>
+                </span>
+            {% endif %}
+        </div>
+
+    </div>
+</td>
+
+
 
             <!-- QR Regenerate -->
             <td class="text-center">
@@ -122,11 +229,11 @@
                 {% endif %}
             </td>
         </tr>
-        {% empty %}
+    {% empty %}
         <tr>
             <td colspan="10" class="text-center">No officers found.</td>
         </tr>
-        {% endfor %}
+    {% endfor %}
     </tbody>
 </table>
 

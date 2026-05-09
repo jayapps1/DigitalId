@@ -11,15 +11,14 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
-from officers_dash.forms import OfficerUserUpdateForm
 import base64
 from django.core.files.base import ContentFile
 from django.core.exceptions import ValidationError
-from digital_id.models import IDRequestApproval,  IDRequest, User
+from digital_id.models import IDRequestApproval,  IDRequest, User, ContactMessage
 import uuid
 from django.core.exceptions import PermissionDenied
 from collections import defaultdict
-from officers_dash.forms import OfficerUserUpdateForm, OfficerSelfUpdateForm
+from officers_dash.forms import OfficerUserUpdateForm, OfficerSelfUpdateForm, AdminOfficerUpdateForm
 from django.templatetags.static import static
 from digital_id.services.digital_id.qr_lifecycle import activate_qr
 from django.shortcuts import render, get_object_or_404, redirect
@@ -33,9 +32,13 @@ from payments.paystack_service import initiate_paystack_refund
 from django.db.models.functions import Lower, Concat
 from django.db.models import F, Value
 from django.contrib.auth import get_user_model
-from password_reset.sms_service import send_sms  
-from .forms import SuperUserCreationForm
-
+from password_reset.sms_service import send_sms
+from .forms import SuperUserCreationForm, OfficerRoleAssignForm
+from .mixins import SuperAdminRequiredMixin  # the mixin above
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import user_passes_test
+from digital_id.models import OfficerProfile
+from digital_id.services.digital_id.qr_lifecycle import activate_qr
 
 
 
@@ -43,8 +46,85 @@ from .forms import SuperUserCreationForm
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-# admin_dash/views.py
 
+
+
+# views.py
+
+
+
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or u.role == "REGIONAL_ADMIN")
+def assign_officer_role(request):
+    preselected_officer = request.GET.get("officer")  # Get officer ID from query param
+
+    if request.method == "POST":
+        form = OfficerRoleAssignForm(request.POST, request=request)
+        if form.is_valid():
+            officer = form.cleaned_data['officer']
+            role = form.cleaned_data['role']
+
+            # Update role and flags
+            officer.role = role
+            officer.is_staff = role in ["SUPERADMIN", "REGIONAL_ADMIN", "STATION_ADMIN"]
+            officer.is_superuser = role == "SUPERADMIN"
+            officer.save()
+
+            messages.success(request, f"{officer.firstname} {officer.lastname} role updated to {role}.")
+            return redirect('admin_dash:assign_officer_role')
+    else:
+        form = OfficerRoleAssignForm(request=request)
+
+        # Preselect officer if query param exists
+        if preselected_officer:
+            try:
+                officer_instance = User.objects.get(staffid=preselected_officer)
+                # Only preselect if the current user has permission
+                if (request.user.is_superuser or
+                    (request.user.role == "REGIONAL_ADMIN" and officer_instance.region == request.user.region and officer_instance.role != "SUPERADMIN")):
+                    form.fields['officer'].initial = officer_instance
+            except User.DoesNotExist:
+                pass  # ignore invalid IDs
+
+    return render(request, "admin_dash/assign_role.html", {"form": form})
+
+
+
+def superadmin_required(user):
+    return user.is_authenticated and user.is_superuser
+
+
+@require_POST
+@user_passes_test(superadmin_required)
+def bulk_mark_read(request):
+    ids = request.POST.getlist("selected_messages")
+
+    if ids:
+        ContactMessage.objects.filter(id__in=ids, is_read=False).update(is_read=True)
+        messages.success(request, f"{len(ids)} message(s) marked as read.")
+    else:
+        messages.warning(request, "No messages selected.")
+
+    return redirect("admin_dash:contactmessage_list")
+
+
+@require_POST
+@user_passes_test(superadmin_required)
+def bulk_delete(request):
+    ids = request.POST.getlist("selected_messages")
+
+    if ids:
+        ContactMessage.objects.filter(id__in=ids).delete()
+        messages.success(request, f"{len(ids)} message(s) deleted.")
+    else:
+        messages.warning(request, "No messages selected.")
+
+    return redirect("admin_dash:contactmessage_list")
+
+
+# admin_dash/views.py
 
 class CreateSuperUserView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     form_class = SuperUserCreationForm
@@ -59,29 +139,58 @@ class AdminHomeView(AdminRequiredMixin, ListView):
     model = User
     template_name = "admin_dash/admin_home.html"
     context_object_name = "officers"
-    paginate_by = 20  # Show 20 officers per page
+    paginate_by = 20
 
     def get_queryset(self):
-        """
-        Return all users with related profiles, ordered alphabetically
-        by full name (first + last), case-insensitive.
-        """
+        user = self.request.user
+
+        # 1️⃣ Base queryset
+        qs = User.objects.filter(is_active=True)
+
+        # 2️⃣ Role-based scoping
+        if user.role == "STATION_ADMIN":
+            qs = qs.filter(profile__station__iexact=user.profile.station)
+
+        elif user.role == "REGIONAL_ADMIN":
+            qs = qs.filter(region=user.region)
+
+        elif user.role == "SUPERADMIN":
+            pass
+
+        else:
+            return User.objects.none()
+
+        # 3️⃣ Live search (refine the scoped queryset)
+        q = self.request.GET.get("q")
+        if q:
+            qs = qs.filter(
+                Q(firstname__icontains=q) |
+                Q(lastname__icontains=q) |
+                Q(staffid__icontains=q)
+            )
+
+        # 4️⃣ Annotation + ordering
         return (
-            User.objects.select_related('profile')
-                        .annotate(full_name=Concat(F('firstname'), Value(' '), F('lastname')))
-                        .order_by(Lower('full_name'))
+            qs.select_related("profile")
+              .annotate(
+                  full_name=Concat(
+                      F("firstname"),
+                      Value(" "),
+                      F("lastname")
+                  )
+              )
+              .order_by(Lower("full_name"))
         )
 
     def get_context_data(self, **kwargs):
-        """
-        Add start_index for continuous numbering across pages.
-        """
         context = super().get_context_data(**kwargs)
-        page = context.get('page_obj')  # Provided automatically by ListView
-        context['start_index'] = (page.number - 1) * self.paginate_by if page else 0
+        page = context.get("page_obj")
+        context["start_index"] = (page.number - 1) * self.paginate_by if page else 0
         return context
-    
-    
+
+
+
+
 class AdminOfficerDetailView(LoginRequiredMixin, DetailView):
     model = User
     template_name = "admin_dash/officer_detail.html"
@@ -104,7 +213,8 @@ class AdminOfficerDetailView(LoginRequiredMixin, DetailView):
         context["is_admin_view"] = self.request.user.is_staff or self.request.user.is_superuser
         context["is_self"] = self.request.user == self.object
         return context
-    
+
+
 
 class AdminOfficerEditView(LoginRequiredMixin, UpdateView):
     model = User
@@ -114,32 +224,76 @@ class AdminOfficerEditView(LoginRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         staffid = self.kwargs.get("staffid")
+        target = get_object_or_404(User, staffid=staffid)
         user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return get_object_or_404(User, staffid=staffid)
-        return get_object_or_404(User, staffid=user.staffid)
+
+        # ✅ ALWAYS allow self-edit FIRST
+        if target == user:
+            return target
+
+        # SUPERUSER can edit everyone
+        if user.is_superuser:
+            return target
+
+        # REGIONAL_ADMIN can edit anyone in their region except SUPERADMIN
+        if user.role == "REGIONAL_ADMIN":
+            if target.role == "SUPERADMIN":
+                raise PermissionDenied("You cannot edit a Superuser.")
+
+            if target.region != user.region:
+                raise PermissionDenied("You can only edit users within your region.")
+
+            return target
+
+        # STATION_ADMIN can only edit officers in their station
+        if user.role == "STATION_ADMIN":
+            if (
+                target.role != "OFFICER"
+                or not hasattr(target, "profile")
+                or target.profile.station != user.profile.station
+            ):
+                raise PermissionDenied("You can only edit officers in your station.")
+            return target
+
+        raise PermissionDenied("You do not have permission to edit this user.")
+
 
     def get_form_class(self):
-        if self.request.user.is_staff or self.request.user.is_superuser:
+        user = self.request.user
+
+        # Superadmin gets full admin update form
+        if user.is_superuser:
+            return AdminOfficerUpdateForm
+
+        # Regional/station admin gets normal officer update form
+        elif user.role in ["REGIONAL_ADMIN", "STATION_ADMIN"]:
             return OfficerUserUpdateForm
+
+        # Regular officer edits themselves
         return OfficerSelfUpdateForm
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+
+        # Ensure object exists
+        self.object = self.get_object()
+
+        # Create or get profile for the user being edited
         profile, _ = OfficerProfile.objects.get_or_create(user=self.object)
+
         kwargs["profile_instance"] = profile
+        kwargs["request"] = self.request  # Required for AdminOfficerUpdateForm
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         profile = getattr(self.object, "profile", None)
+
         if profile and profile.photo:
             context["photo_url"] = profile.photo.url
         else:
             context["photo_url"] = static(
-                "officers_dash/male.JPG"
-                if self.object.gender == "M"
-                else "officers_dash/female.JPG"
+                "officers_dash/male.JPG" if self.object.gender == "M" else "officers_dash/female.JPG"
             )
         return context
 
@@ -148,9 +302,12 @@ class AdminOfficerEditView(LoginRequiredMixin, UpdateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        if self.request.user.is_staff or self.request.user.is_superuser:
+        user = self.request.user
+        if user.is_superuser or user.role in ["REGIONAL_ADMIN", "STATION_ADMIN"]:
             return reverse_lazy("admin_dash:home")
         return reverse_lazy("officers_dash:dashboard")
+
+
 
 
 class AdminOfficerDeleteView(AdminRequiredMixin, DeleteView):
@@ -163,12 +320,79 @@ class AdminOfficerDeleteView(AdminRequiredMixin, DeleteView):
     def get_object(self, queryset=None):
         staffid = self.kwargs.get("staffid")
         obj = get_object_or_404(User, staffid=staffid)
+        user = self.request.user
 
-        # 🚫 Prevent admin/superuser from deleting themselves
-        if obj == self.request.user:
+        # Prevent deleting yourself
+        if obj == user:
             raise PermissionDenied("You cannot delete your own account.")
 
-        return obj
+        # Superuser can delete anyone
+        if user.is_superuser:
+            return obj
+
+        # Regional admin cannot delete superuser
+        if user.role == "REGIONAL_ADMIN":
+            if obj.role == "SUPERADMIN":
+                raise PermissionDenied("You cannot delete a Superuser.")
+            return obj
+
+        # Station admin restrictions
+        if user.role == "STATION_ADMIN":
+            if obj.role != "OFFICER":
+                raise PermissionDenied("Station Admin can only delete officers in their station.")
+            if obj.profile.station != user.profile.station:
+                raise PermissionDenied("You can only delete officers in your station.")
+            return obj
+
+        # Default: deny access
+        raise PermissionDenied("You do not have permission to delete this user.")
+
+
+
+
+# -------------------
+# List all messages
+# -------------------
+class ContactMessageListView(SuperAdminRequiredMixin, ListView):
+    model = ContactMessage
+    template_name = "admin_dash/contactmessage_list.html"
+    context_object_name = "contact_messages"
+    ordering = ["-created_at"]
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # only show messages for this user if not superuser
+        if not self.request.user.is_superuser:
+            qs = qs.filter(user=self.request.user)
+        return qs
+
+
+# -------------------
+# View a single message
+# -------------------
+
+
+class ContactMessageDetailView(SuperAdminRequiredMixin, DetailView):
+    model = ContactMessage
+    template_name = "admin_dash/contactmessage_detail.html"
+    context_object_name = "message"
+
+    def get(self, request, *args, **kwargs):
+        message = self.get_object()
+        if not message.is_read:
+            message.is_read = True
+            message.save()
+        return super().get(request, *args, **kwargs)
+
+
+# -------------------
+# Delete a message
+# -------------------
+class ContactMessageDeleteView(SuperAdminRequiredMixin, DeleteView):
+    model = ContactMessage
+    template_name = "admin_dash/contactmessage_confirm_delete.html"
+    success_url = reverse_lazy("admin_dash:contactmessage_list")
 
 
 
@@ -225,7 +449,7 @@ def admin_print_qr(request, staffid):
             </style>
         </head>
         <body onload="window.print()">
-           
+
             <img src="{profile.qr_image.url}">
         </body>
         </html>
@@ -259,14 +483,12 @@ def admin_id_request_list(request):
 
 
 
-
 @staff_member_required
 def admin_id_request_detail(request, staffid):
     """
     Admin detail view for approving or rejecting ID requests.
     Sends BOTH SMS and in-app notification on approval.
     """
-
     officer = get_object_or_404(User, staffid=staffid)
 
     approval = (
@@ -287,7 +509,6 @@ def admin_id_request_detail(request, staffid):
         return redirect("admin_dash:admin_id_request_list")
 
     payment = getattr(approval.id_request, "payment", None)
-
     if not payment or payment.status != "SUCCESS":
         messages.error(
             request,
@@ -309,32 +530,27 @@ def admin_id_request_detail(request, staffid):
                 staffid=officer.staffid
             )
 
+        # UPDATE APPROVAL
         approval.status = action
         approval.approved_by = request.user
         approval.date_processed = timezone.now()
         approval.save()
 
+        profile = officer.profile  # always get profile here
+
         # =====================================================
         # APPROVAL FLOW
         # =====================================================
         if action == "APPROVED":
-            profile = officer.profile
-
-            # ---------- QR SETUP ----------
+            # Ensure QR token exists
             if not profile.qr_token:
                 profile.qr_token = uuid.uuid4().hex[:12].upper()
+                profile.save(update_fields=["qr_token"])
 
-            profile.is_active_qr = True
-            profile.qr_expiry_date = timezone.now() + timedelta(days=365)
-            profile.date_approved = timezone.now()
-            profile.save(update_fields=[
-                "qr_token",
-                "is_active_qr",
-                "qr_expiry_date",
-                "date_approved"
-            ])
+            # Always activate QR (5 years expiry for both new & existing)
+            activate_qr(profile, approved_by=request.user)
 
-            # ---------- SMS (ONE SOURCE OF TRUTH) ----------
+            # ---------- SMS ----------
             sms_result = send_qr_link(profile)
             if sms_result.get("success"):
                 messages.success(
@@ -347,10 +563,7 @@ def admin_id_request_detail(request, staffid):
                     f"SMS failed: {sms_result.get('error')}"
                 )
 
-            # ---------- IN-APP NOTIFICATION ----------
-           # -------------------------------
-            # In-app notification (APPROVED) → PRINT ID PAGE
-            # -------------------------------
+            # ---------- In-app Notification ----------
             Notification.objects.create(
                 user=officer,
                 title="ID Request Approved",
@@ -358,12 +571,8 @@ def admin_id_request_detail(request, staffid):
                     "Your ID request has been approved. "
                     "Click to view and print your official ID card."
                 ),
-                link=reverse(
-                    "digital_id:officer_id",  # staffid-based print ID view
-                    args=[officer.staffid]
-                )
+                link=reverse("digital_id:officer_id", args=[officer.staffid])
             )
-
 
             messages.success(request, "ID request approved successfully.")
 
@@ -372,7 +581,6 @@ def admin_id_request_detail(request, staffid):
         # =====================================================
         elif action == "REJECTED":
             refund_result = payment.refund()
-
             if refund_result.get("status") == "success":
                 messages.success(
                     request,
@@ -403,14 +611,15 @@ def admin_id_request_detail(request, staffid):
 
 
 # -----------------------------
-# badge count in approvals 
+# badge count in approvals
 # -----------------------------
 
 from django.http import JsonResponse
+from digital_id.models import IDRequestApproval
 
 def pending_requests_api(request):
     if request.user.is_staff or request.user.is_superuser:
-        count = IDRequest.objects.filter(status="PENDING").count()
+        count = IDRequestApproval.objects.filter(status="PENDING").count()
         return JsonResponse({"count": count})
     return JsonResponse({"count": 0})
 

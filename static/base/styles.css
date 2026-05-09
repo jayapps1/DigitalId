@@ -9,7 +9,7 @@
     --charcoal: #2E2E2E;
 }
 
-  
+
 
 
 /* =========================
@@ -37,6 +37,97 @@
 .gnfs-navbar {
   overflow: visible !important;
 }
+/* ==================================================
+   OFFCANVAS – GNFS THEME (BOOTSTRAP SAFE)
+   ================================================== */
+
+/* Offcanvas background */
+.offcanvas {
+    background-color: #FFFFFF; /* Clean White */
+}
+
+/* Base link style */
+.offcanvas .gnfs-offcanvas-nav .nav-link {
+    padding: 0.9rem 1.25rem;
+    color: #2E2E2E; /* Charcoal Black */
+    border-bottom: 1px solid rgba(46, 46, 46, 0.06);
+    font-weight: 500;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Hover state */
+.offcanvas .gnfs-offcanvas-nav .nav-link:hover {
+    background-color: rgba(167, 216, 222, 0.45); /* Light Caring Blue */
+    color: #2E2E2E;
+    text-decoration: none;
+}
+
+/* Active link */
+.offcanvas .gnfs-offcanvas-nav .nav-link.active {
+    background-color: #8BC0A9; /* Soft Mint Green */
+    color: #2E2E2E;
+    font-weight: 600;
+    border-left: 4px solid #D71920; /* Fire Red indicator */
+}
+
+/* ==================================================
+   GNFS ADMIN MENU BUTTON (NAVBAR FIXED)
+   ================================================== */
+
+.navbar .gnfs-admin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+
+    background-color: transparent !important;
+    color: #D71920 !important;          /* Fire Red */
+    border: 2px solid #D71920 !important;
+
+    font-weight: 600;
+    padding: 0.35rem 0.8rem;
+    line-height: 1.1;
+    white-space: nowrap;
+
+    height: auto;
+    align-self: center;
+
+    transition: background-color 0.25s ease,
+                color 0.25s ease,
+                border-color 0.25s ease;
+}
+
+/* Hover */
+.navbar .gnfs-admin-btn:hover {
+    background-color: #D71920 !important;
+    color: #FFFFFF !important;
+    border-color: #D71920 !important;
+}
+
+/* Focus / active */
+.navbar .gnfs-admin-btn:focus,
+.navbar .gnfs-admin-btn:active {
+    background-color: #B5151A !important;
+    color: #FFFFFF !important;
+    border-color: #B5151A !important;
+    box-shadow: 0 0 0 0.15rem rgba(215, 25, 32, 0.25) !important;
+}
+
+/* ==================================================
+   BADGES
+   ================================================== */
+
+.offcanvas .gnfs-offcanvas-nav .badge {
+    background-color: #D71920; /* Fire Red */
+    color: #FFFFFF;
+    font-size: 0.7rem;
+}
+
+
+
+
+
+
 
 /* =========================
    MAIN NAVBAR
@@ -312,4 +403,11 @@
         transform: translateY(0);
     }
 }
+
+.select2-container--default .select2-selection__placeholder {
+    color: #D71920 !important;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
 

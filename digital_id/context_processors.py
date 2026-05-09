@@ -1,29 +1,43 @@
-from digital_id.models import IDRequest
+from digital_id.models import ContactMessage, Notification, IDRequest
 
-
-
-def notifications(request):
-    from digital_id.models import Notification
-    
-
+def navbar_counts(request):
     if not request.user.is_authenticated:
         return {}
 
-    if request.user.is_staff or request.user.is_superuser:
+    user = request.user
+
+    # -------------------------
+    # Role-aware notifications
+    # -------------------------
+    if user.role == "SUPERADMIN":
         qs = Notification.objects.all()
+
+    elif user.role == "REGIONAL_ADMIN" and user.region:
+        qs = Notification.objects.filter(user__region=user.region)
+
+    elif (
+        user.role == "STATION_ADMIN"
+        and hasattr(user, "profile")
+        and user.profile.station
+    ):
+        qs = Notification.objects.filter(
+            user__profile__station=user.profile.station
+        )
+
     else:
-        qs = Notification.objects.filter(user=request.user)
+        qs = Notification.objects.filter(user=user)
 
     return {
-        'unread_notifications_count': qs.filter(is_read=False).count(),
-        'notifications': qs.order_by('-created_at')[:5],  # preview only
+        "dropdown_notifications": qs.order_by("-created_at")[:5],
+        "unread_notifications_count": qs.filter(is_read=False).count(),
+        "pending_requests_count": (
+            IDRequest.objects.filter(approval__status="PENDING").count()
+            if user.role in ["SUPERADMIN", "REGIONAL_ADMIN", "STATION_ADMIN"]
+            else 0
+        ),
+        "unread_messages_count": (
+            ContactMessage.objects.filter(is_read=False).count()
+            if user.role == "SUPERADMIN"
+            else 0
+        ),
     }
-
-
-
-def pending_requests_count(request):
-    if request.user.is_staff or request.user.is_superuser:
-        count = IDRequest.objects.filter(approval__status="PENDING").count()
-        return {"pending_requests_count": count}
-    return {"pending_requests_count": 0}
-

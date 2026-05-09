@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from .models import User, Notification, IDRequest, IDRequestApproval
-from .forms import IDRequestForm, AdminOfficerRegistrationForm
+from .forms import IDRequestForm, AdminOfficerRegistrationForm, ContactMessageForm
 from django.utils import timezone
 from django.db.models import Q
 from .models import User, OfficerProfile
@@ -20,6 +20,16 @@ from django.views import View
 from django.contrib.auth import get_user_model
 import re
 from django.db import transaction, models
+from password_reset.sms_service import send_sms
+from django.urls import reverse
+
+
+
+
+
+
+
+
 
 def Home(request):
     return render(request, "digital_id/index.html")
@@ -30,6 +40,22 @@ def Home(request):
 
 User = get_user_model()
 
+
+
+@login_required
+def about(request):
+    """
+    Renders the About Digital ID page for logged-in officers only.
+    """
+    # Check if user is an officer (assuming officers have a staffid)
+    if not hasattr(request.user, 'staffid') or not request.user.staffid:
+        # Redirect non-officers (admins, public, etc.) to their dashboard or home
+        if request.user.is_staff or request.user.is_superuser:
+            return redirect('admin_dash:home')
+        else:
+            return redirect('digital_id:login')
+
+    return render(request, 'about.html')
 
 
 # -------------------------
@@ -62,9 +88,12 @@ class OfficerExcelImportView(View):
 
         expected_columns = [
             'staffid', 'service_number', 'firstname', 'lastname', 'gender',
-            'role', 'region', 'district', 'rank', 'station'
+            'role', 'region', 'district', 'rank', 'station', 'phone'
         ]
-        header = [cell.value for cell in next(sheet.iter_rows(min_row=1, max_row=1))]
+
+        header = [str(cell.value).strip() if cell.value else ""
+                  for cell in next(sheet.iter_rows(min_row=1, max_row=1))]
+
         if header != expected_columns:
             messages.error(
                 request,
@@ -75,29 +104,77 @@ class OfficerExcelImportView(View):
         created = 0
         updated = 0
         skipped = []
+        broadcast_list = []
 
-        gender_map = {"MALE": "M", "FEMALE": "F", "M": "M", "F": "F"}
-        rank_map = {"NON-COMMISSIONED OFFICER": "NCO", "COMMISSIONED OFFICER": "CO", "NCO": "NCO", "CO": "CO"}
-        role_map = {"OFFICER": "OFFICER", "ADMIN OFFICER": "ADMIN", "SYSTEM SUPER ADMIN": "SUPERADMIN"}
+        gender_map = {
+            "MALE": "M", "FEMALE": "F", "M": "M", "F": "F"
+        }
+
+        rank_map = {
+            "NON-COMMISSIONED OFFICER": "NCO",
+            "COMMISSIONED OFFICER": "CO",
+            "NCO": "NCO",
+            "CO": "CO"
+        }
+
+        role_map = {
+            "OFFICER": "OFFICER",
+            "ADMIN OFFICER": "ADMIN",
+            "SYSTEM SUPER ADMIN": "SUPERADMIN"
+        }
+
+        region_map = {
+            "GREATER ACCRA": "GREATER_ACC",
+            "ASHANTI": "ASHANTI",
+            "NORTHERN": "NORTHERN",
+            "UPPER EAST": "UPPER_EAST",
+            "UPPER WEST": "UPPER_WEST",
+            "WESTERN": "WESTERN",
+            "EASTERN": "EASTERN",
+            "CENTRAL": "CENTRAL",
+            "BRONG AHAFO": "BRONG_AHAFO",
+            "SAVANNAH": "SAVANNAH",
+            "OTI": "OTI",
+            "AHAFO": "AHAFO",
+            "WESTERN NORTH": "WESTERN_NORTH",
+            "BONO EAST": "BONO_EAST",
+            "NORTH EAST": "NORTH_EAST",
+            "VOLTA": "VOLTA",
+        }
 
         for idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
             if not row or all(cell is None for cell in row):
                 continue
 
-            (
-                staffid, service_number, firstname, lastname, gender,
-                role, region, district, rank, station
-            ) = row
+            try:
+                (
+                    staffid, service_number, firstname, lastname, gender,
+                    role, region, district, rank, station, phone
+                ) = row
+            except ValueError:
+                skipped.append((idx, "Incorrect number of columns"))
+                continue
 
             staffid = self._safe_str(staffid, upper=True)
             service_number = self._safe_str(service_number, upper=True)
+            phone = self._safe_str(phone)
+            region_clean = self._safe_str(region, upper=True)
 
             if not staffid or not service_number:
                 skipped.append((idx, "Missing staffid or service_number"))
                 continue
 
-            if not re.fullmatch(r'GF\d{6}D', service_number):
-                skipped.append((idx, f"Invalid service number: {service_number}"))
+            # -------------------------
+            # Normalize and validate service number
+            # -------------------------
+            pattern = r'^(GF\d{5,6}[A-Z]|\d{7,8}[A-Z])$'
+            if not re.fullmatch(pattern, service_number):
+                skipped.append((
+                    idx,
+                    "Invalid service number format. Must be:\n"
+                    "- 7–8 digits followed by a letter (e.g., 2025500J)\n"
+                    "- OR start with GF, followed by 5–6 digits and a letter (e.g., GF200058D)"
+                ))
                 continue
 
             gender_code = gender_map.get(self._safe_str(gender, upper=True))
@@ -105,9 +182,13 @@ class OfficerExcelImportView(View):
                 skipped.append((idx, f"Invalid gender: {gender}"))
                 continue
 
+            region_code = region_map.get(region_clean)
+            if not region_code:
+                skipped.append((idx, f"Invalid region: {region}"))
+                continue
+
             try:
                 with transaction.atomic():
-                    # Update or create user
                     user, is_created = User.objects.update_or_create(
                         staffid=staffid,
                         defaults={
@@ -115,23 +196,32 @@ class OfficerExcelImportView(View):
                             "firstname": self._safe_str(firstname),
                             "lastname": self._safe_str(lastname),
                             "gender": gender_code,
-                            "role": role_map.get(self._safe_str(role, upper=True), "OFFICER"),
-                            "region": self._safe_str(region),
+                            "role": role_map.get(
+                                self._safe_str(role, upper=True),
+                                "OFFICER"
+                            ),
+                            "region": region_code,
                             "district": self._safe_str(district),
+                            "phone": phone,
                         }
                     )
+
                     if is_created:
                         user.set_password("Officer@123")
                         user.save()
                         created += 1
+                        if phone:
+                            broadcast_list.append((phone, user))
                     else:
                         updated += 1
 
-                    # Update or create OfficerProfile
                     OfficerProfile.objects.update_or_create(
                         user=user,
                         defaults={
-                            "rank": rank_map.get(self._safe_str(rank, upper=True), "NCO"),
+                            "rank": rank_map.get(
+                                self._safe_str(rank, upper=True),
+                                "NCO"
+                            ),
                             "station": self._safe_str(station),
                         }
                     )
@@ -139,6 +229,26 @@ class OfficerExcelImportView(View):
             except Exception as e:
                 skipped.append((idx, str(e)))
 
+        # -------------------------
+        # Broadcast SMS AFTER import
+        # -------------------------
+        for phone, officer in broadcast_list:
+            try:
+                sms_message = (
+                    f"Hello {officer.firstname},\n\n"
+                    f"Your Digital ID account is ready.\n"
+                    f"Staff ID: {officer.staffid}\n"
+                    f"Temporary Password: Officer@123\n\n"
+                    f"Please change your password immediately:\n"
+                    f"{request.build_absolute_uri(reverse('digital_id:change_password'))}"
+                )
+                send_sms(phone, sms_message)
+            except Exception as e:
+                print(f"SMS failed for {phone}: {e}")
+
+        # -------------------------
+        # Final Message
+        # -------------------------
         message = f"{created} officers created, {updated} officers updated."
         if skipped:
             message += f" {len(skipped)} rows skipped.\n"
@@ -147,6 +257,56 @@ class OfficerExcelImportView(View):
 
         messages.success(request, message)
         return redirect('digital_id:import_officer')
+
+# -------------------------
+# contact us view
+# -------------------------
+
+@login_required
+def contact_us(request):
+    user = request.user
+
+    # Only roles allowed to send messages
+    send_roles = ["OFFICER", "STATION_ADMIN", "REGIONAL_ADMIN"]
+
+    # Redirect roles that cannot send messages
+    if user.role not in send_roles:
+        # SUPERADMIN redirected to admin dashboard
+        return redirect("admin_dash:home")
+
+    # Prefill profile info if available
+    officer_profile = getattr(user, "profile", None)
+
+    if request.method == "POST":
+        form = ContactMessageForm(request.POST, request.FILES)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.user = user
+            msg.role = user.role  # make role immutable
+            msg.save()
+            # Redirect to success page after sending
+            return redirect("digital_id:contact_success")
+    else:
+        form = ContactMessageForm()
+
+    return render(
+        request,
+        "digital_id/contact_us.html",
+        {
+            "form": form,
+            "officer_profile": officer_profile,  # pass profile for template prefill
+        }
+    )
+
+
+# -------------------------
+# message success view
+# -------------------------
+
+@login_required
+def contact_success(request):
+    return render(request, "digital_id/contact_success.html")
+
 
 
 # -------------------------
@@ -163,38 +323,66 @@ def officer_id(request, staffid):
 
 
 
-
 # -------------------------
 # Admin check decorator
 # -------------------------
 def is_admin(user):
-    return user.is_authenticated and user.role in ["ADMIN", "SUPERADMIN"]
+    return user.is_authenticated and user.role in [
+        "SUPERADMIN",      # your top-level admin
+        "REGIONAL_ADMIN", # regional admin
+        "STATION_ADMIN",  # station admin
+    ]
 
 
-# -------------------------
-# Officer registration view
-# -------------------------
+
 @login_required
 @user_passes_test(is_admin)
 def register_officer(request):
     if request.method == "POST":
-        form = AdminOfficerRegistrationForm(request.POST)
+        form = AdminOfficerRegistrationForm(request.POST, request=request)
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    form.save()
+                    officer = form.save()  # Save the new officer
             except IntegrityError as e:
                 form.add_error(None, f"Registration failed: Duplicate entry ({str(e)})")
             else:
+                # -------- Send SMS using officer.phone (normalized) --------
+                if officer.phone:
+                    try:
+                        sms_result = send_sms(
+                            officer.phone,
+                            f"Hello {officer.firstname},\n\n"
+                            f"Your Digital ID account is ready.\n"
+                            f"Staff ID: {officer.staffid}\n"
+                            f"Temporary Password: Officer@123\n\n"
+                            f"Please change your password immediately:\n"
+                            f"{request.build_absolute_uri(reverse('digital_id:change_password'))}"
+                        )
+                        if not sms_result.get("success"):
+                            messages.warning(
+                                request,
+                                f"Officer registered, but SMS failed: {sms_result.get('error')}"
+                            )
+                    except Exception as e:
+                        messages.warning(
+                            request,
+                            f"Officer registered, but SMS sending encountered an error: {str(e)}"
+                        )
+
                 messages.success(
                     request,
                     "Officer registered successfully. Default password assigned if none provided."
                 )
                 return redirect("digital_id:register_officer")
     else:
-        form = AdminOfficerRegistrationForm()
+        form = AdminOfficerRegistrationForm(request=request)
 
-    return render(request, "digital_id/register_officer.html", {"form": form})
+    return render(
+        request,
+        "digital_id/register_officer.html",
+        {"form": form}
+    )
 
 
 @login_required
@@ -337,7 +525,7 @@ def change_password(request):
             # Redirect based on profile completion (officers only)
             if is_officer and not user.profile_completed:
                 return redirect("officers_dash:complete_profile")
-            
+
             # Redirect to dashboard based on user type
             if user.is_staff or user.is_superuser:
                 return redirect("admin_dash:home")
@@ -363,75 +551,105 @@ def user_logout(request):
     messages.success(request, "You have successfully logged out.")
     return redirect('digital_id:login')
 
+
+
 class NotificationsView(LoginRequiredMixin, TemplateView):
-    template_name = 'digital_id/notifications.html'
+    template_name = "digital_id/notifications.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
 
-        if user.is_staff or user.is_superuser:
-            notifications = Notification.objects.select_related(
-                "user"
-            ).order_by("-created_at")
+        # SUPERADMIN → sees all
+        if user.role == "SUPERADMIN":
+            notifications = Notification.objects.select_related("user")
 
-            # mark all as read for admin
-            Notification.objects.filter(is_read=False).update(is_read=True)
+        # REGIONAL ADMIN → only their region
+        elif user.role == "REGIONAL_ADMIN":
+            notifications = Notification.objects.select_related("user").filter(
+                user__region=user.region
+            )
 
+        # STATION ADMIN → only their station
+        elif user.role == "STATION_ADMIN":
+            notifications = Notification.objects.select_related("user").filter(
+                user__profile__station=user.profile.station
+            )
+
+        # OFFICER → only their own
         else:
-            notifications = Notification.objects.select_related(
-                "user"
-            ).filter(
-                user__staffid=user.staffid
-            ).order_by("-created_at")
+            notifications = Notification.objects.filter(user=user)
 
-            # mark officer notifications as read
-            Notification.objects.filter(
-                user__staffid=user.staffid,
-                is_read=False
-            ).update(is_read=True)
+        # Mark only what the user can see as read
+        notifications.filter(is_read=False).update(is_read=True)
 
-        context["notifications"] = notifications
+        context["notifications"] = notifications.order_by("-created_at")
         return context
-    
+
+
 
 from django.views.decorators.http import require_POST
-
 @login_required
 def view_notification(request, pk):
-    """
-    View a single notification in detail.
+    user = request.user
 
-    - Staff/superuser can view all notifications.
-    - Regular users can only view their own notifications.
-    - Marks notification as read.
-    - Redirects to link if specified, otherwise renders detail page.
-    """
-    # Filter notifications by user unless staff/superuser
-    if request.user.is_staff or request.user.is_superuser:
-        note = get_object_or_404(Notification, pk=pk)
+    if user.role == "SUPERADMIN":
+        queryset = Notification.objects.all()
+
+    elif user.role == "REGIONAL_ADMIN":
+        queryset = Notification.objects.filter(user__region=user.region)
+
+    elif user.role == "STATION_ADMIN":
+        queryset = Notification.objects.filter(
+            user__profile__station=user.profile.station
+        )
+
     else:
-        note = get_object_or_404(Notification, pk=pk, user=request.user)
+        queryset = Notification.objects.filter(user=user)
+
+    note = queryset.filter(pk=pk).first()
+
+    # 🚨 Graceful failure instead of 404
+    if not note:
+        messages.warning(
+            request,
+            "You are not permitted to view this notification."
+        )
+        return redirect("digital_id:notifications")
 
     # Mark as read
     if not note.is_read:
         note.is_read = True
         note.save(update_fields=["is_read"])
 
-    # Redirect to external link if exists
+    # Redirect if notification has a link
     if note.link:
         return redirect(note.link)
 
-    # Render detail page if no link
-    return render(request, "digital_id/notification_detail.html", {"note": note})
+    return render(
+        request,
+        "digital_id/notification_detail.html",
+        {"note": note}
+    )
+
 
 
 @login_required
 def delete_notification(request, pk):
-    note = get_object_or_404(Notification, pk=pk)
-    if not (request.user.is_staff or request.user.is_superuser) and note.user != request.user:
-        return redirect("digital_id:notifications")
-    note.delete()
+    user = request.user
+
+    qs = Notification.objects.filter(pk=pk)
+
+    if user.role == "SUPERADMIN":
+        pass
+    elif user.role == "REGIONAL_ADMIN":
+        qs = qs.filter(user__region=user.region)
+    elif user.role == "STATION_ADMIN":
+        qs = qs.filter(user__profile__station=user.profile.station)
+    else:
+        qs = qs.filter(user=user)
+
+    qs.delete()
     return redirect("digital_id:notifications")
 
 
@@ -439,14 +657,21 @@ def delete_notification(request, pk):
 @require_POST
 def bulk_delete_notifications(request):
     ids = request.POST.getlist("notification_ids")
-    if request.user.is_staff or request.user.is_superuser:
-        Notification.objects.filter(id__in=ids).delete()
+    user = request.user
+
+    qs = Notification.objects.filter(id__in=ids)
+
+    if user.role == "SUPERADMIN":
+        pass
+    elif user.role == "REGIONAL_ADMIN":
+        qs = qs.filter(user__region=user.region)
+    elif user.role == "STATION_ADMIN":
+        qs = qs.filter(user__profile__station=user.profile.station)
     else:
-        Notification.objects.filter(id__in=ids, user=request.user).delete()
+        qs = qs.filter(user=user)
+
+    qs.delete()
     return redirect("digital_id:notifications")
-
-
-from django.http import JsonResponse
 
 
 

@@ -1,0 +1,151 @@
+{% extends "admin_dash/admin_home.html" %}
+{% block title%}
+    ContactUsList
+{% endblock title%}
+{% block content %}
+<div class="container my-5">
+  <h3 class="mb-4" style="color:#D71920;">Contact Messages</h3>
+
+  {% if contact_messages %}
+
+  <!-- NEW: BULK FORM -->
+  <form method="post">
+    {% csrf_token %}
+
+    <!-- NEW: BULK ACTION BUTTONS -->
+    <div class="mb-3 d-flex gap-2">
+      <button type="submit"
+              formaction="{% url 'admin_dash:contactmessage_bulk_read' %}"
+              class="btn btn-sm btn-success">
+        Mark Selected as Read
+      </button>
+
+      <button type="submit"
+              formaction="{% url 'admin_dash:contactmessage_bulk_delete' %}"
+              class="btn btn-sm btn-danger"
+              onclick="return confirm('Delete selected messages?');">
+        Delete Selected
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-dark" style="background-color:#D71920; color:#FFFFFF;">
+          <tr>
+            <!-- NEW -->
+            <th>
+              <input type="checkbox" id="select-all">
+            </th>
+
+            <th>#</th>
+            <th>Staff ID</th>
+            <th>Role</th>
+            <th>Subject</th>
+            <th>Station</th>
+            <th>Sent At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for msg in contact_messages %}
+          <tr class="{% if not msg.is_read %}table-warning{% endif %}">
+
+            <!-- NEW -->
+            <td>
+              <input type="checkbox"
+                     name="selected_messages"
+                     value="{{ msg.id }}"
+                     class="row-checkbox">
+            </td>
+
+            <td>{{ forloop.counter }}</td>
+            <td>{{ msg.user.staffid|default:"-" }}</td>
+            <td>{{ msg.role }}</td>
+
+            <td>
+              {{ msg.subject|default:"-" }}
+              {% if not msg.is_read %}
+                <span class="badge bg-danger ms-2">NEW</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if msg.user and msg.user.profile %}
+                {{ msg.user.profile.station|default:"-" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>{{ msg.created_at|date:"M d, Y H:i" }}</td>
+
+            <td>
+              <a href="{% url 'admin_dash:contactmessage_detail' msg.pk %}"
+                 class="btn btn-sm fw-semibold"
+                 style="background:#8BC0A9; color:#2E2E2E;">
+                 View
+              </a>
+
+              <button class="btn btn-sm fw-semibold"
+                      style="background:#FDBB30; color:#2E2E2E;"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteModal{{ msg.pk }}">
+                Delete
+              </button>
+            </td>
+          </tr>
+
+          <!-- INDIVIDUAL DELETE MODAL (UNCHANGED) -->
+          <div class="modal fade" id="deleteModal{{ msg.pk }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                  <h5 class="modal-title">Delete Message</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                  <p>Are you sure you want to delete this message?</p>
+                  <p class="fw-semibold">{{ msg.subject|default:"No subject" }}</p>
+                </div>
+
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                  </button>
+
+                  <form method="post" action="{% url 'admin_dash:contactmessage_delete' msg.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                      Yes, Delete
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+
+  {% else %}
+    <div class="alert alert-info text-center">
+      No contact messages yet.
+    </div>
+  {% endif %}
+</div>
+
+<!-- NEW: SELECT ALL SCRIPT -->
+<script>
+  document.getElementById("select-all").addEventListener("change", function () {
+    document.querySelectorAll(".row-checkbox").forEach(cb => {
+      cb.checked = this.checked;
+    });
+  });
+</script>
+
+{% endblock %}

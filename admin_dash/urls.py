@@ -6,8 +6,11 @@ from admin_dash.views import (
     admin_print_qr,  # Import the function-based view
     AdminOfficerDetailView,
     AdminOfficerEditView,
-    AdminOfficerDeleteView
-    
+    AdminOfficerDeleteView,
+    ContactMessageListView,
+    ContactMessageDetailView,
+    ContactMessageDeleteView,
+
 )
 from . import views
 
@@ -38,5 +41,12 @@ urlpatterns = [
     path('id-requests/approve/<int:approval_id>/', views.approve_request, name='approve_request'),
     path("search/ajax/", views.user_search_ajax, name="user_search_ajax"),
     path('resend-qr/<str:staffid>/', views.resend_qr, name='resend_qr'),
-
+    path("messages/", ContactMessageListView.as_view(), name="contactmessage_list"),
+    path("messages/<int:pk>/", ContactMessageDetailView.as_view(), name="contactmessage_detail"),
+    path("messages/<int:pk>/delete/", ContactMessageDeleteView.as_view(), name="contactmessage_delete"),
+    path("messages/bulk-read/", views.bulk_mark_read, name="contactmessage_bulk_read"),
+    path("messages/bulk-delete/", views.bulk_delete, name="contactmessage_bulk_delete"),
+    path("officers/assign-role/", views.assign_officer_role, name="assign_officer_role"),
 ]
+
+

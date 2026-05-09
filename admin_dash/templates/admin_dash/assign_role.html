@@ -1,0 +1,121 @@
+{% extends "main.html" %}
+    {% block title%}
+        AssignPermissions
+    {% endblock title%}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <!-- Main Card -->
+            <div class="card shadow-sm border-0 rounded-3">
+
+                <!-- Header -->
+                <div class="card-header text-center"
+                     style="background:#FDBB30;color:#2E2E2E;">
+                    <h4 class="mb-0 fw-semibold">
+                        <i class="fa fa-user-shield me-2" style="color:#D71920;"></i>
+                        Assign Officer Role
+                    </h4>
+                </div>
+
+                <div class="card-body" style="background:#FFFFFF;">
+
+                    {# ================= OFFICER PREVIEW ================= #}
+                    {% if form.selected_officer %}
+                        <div class="card mb-4 border-0 shadow-sm"
+                             style="background:#8BC0A9;">
+                            <div class="card-body d-flex align-items-center gap-3">
+
+                                <!-- Profile Image -->
+                                <div>
+                                    {% if form.selected_officer.profile_image %}
+                                        <img src="{{ form.selected_officer.profile_image.url }}"
+                                             class="rounded-circle border"
+                                             style="width:80px;height:80px;object-fit:cover;border-color:#FDBB30;">
+                                    {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                             style="width:80px;height:80px;background:#A7D8DE;color:#2E2E2E;">
+                                            <i class="fa fa-user fa-2x"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Officer Info -->
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-1" style="color:#2E2E2E;">
+                                        {{ form.selected_officer.firstname }}
+                                        {{ form.selected_officer.lastname }}
+                                    </h5>
+
+                                    <div class="small" style="color:#2E2E2E;">
+                                        <div>
+                                            <i class="fa fa-id-badge me-1" style="color:#D71920;"></i>
+                                            {{ form.selected_officer.staffid }}
+                                        </div>
+                                        <div>
+                                            <i class="fa fa-building me-1" style="color:#FDBB30;"></i>
+                                            {{ form.selected_officer.station|default:"—" }}
+                                        </div>
+                                        <div>
+                                            <i class="fa fa-map-marker-alt me-1" style="color:#D71920;"></i>
+                                            {{ form.selected_officer.region }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Current Role -->
+                                <div>
+                                    <span class="badge px-3 py-2"
+                                          style="background:#D71920;color:#FFFFFF;">
+                                        {{ form.selected_officer.get_role_display }}
+                                    </span>
+                                </div>
+
+                            </div>
+                        </div>
+                    {% endif %}
+                    {# ==================================================== #}
+
+                    <!-- Form -->
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Officer Dropdown -->
+                        <div class="mb-3">
+                            {{ form.officer.label_tag }}
+                            {{ form.officer|add_class:"form-select" }}
+                            {% for error in form.officer.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Role Dropdown -->
+                        <div class="mb-4">
+                            {{ form.role.label_tag }}
+                            {{ form.role|add_class:"form-select" }}
+                            {% for error in form.role.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="d-grid">
+                            <button type="submit"
+                                    class="btn fw-semibold"
+                                    style="background:#D71920;color:#FFFFFF;">
+                                <i class="fa fa-check me-1"></i>
+                                Assign Role
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "admin_dash/admin_home.html" %}
+
+{% block title%}
+    ContactUsMsgDetails
+{% endblock title%}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+
+      <div class="card shadow-lg border-0">
+        <div class="card-header text-center" style="background:#D71920; color:#FFFFFF;">
+          <h4>Message Details</h4>
+        </div>
+
+        <div class="card-body" style="background:#FFFFFF; color:#2E2E2E;">
+          <p><strong>Staff ID:</strong> {{ message.user.staffid }}</p>
+          <p><strong>Phone:</strong> {{ message.user.phone }}</p>
+          <p><strong>Station:</strong> {{ message.user.profile.station }}</p>
+          <p><strong>Role:</strong> {{ message.role }}</p>
+          <p><strong>Subject:</strong> {{ message.subject|default:"-" }}</p>
+          <hr>
+          <p><strong>Message:</strong></p>
+          <p>{{ message.message|linebreaks }}</p>
+
+          {% if message.image %}
+          <hr>
+          <p><strong>Attached Image:</strong></p>
+          <img src="{{ message.image.url }}" alt="Attached Image" class="img-fluid rounded shadow-sm" style="max-height:400px;">
+          {% endif %}
+
+          <hr>
+          <p class="text-muted small">Sent on {{ message.created_at|date:"M d, Y H:i" }}</p>
+
+          <div class="d-flex justify-content-between mt-3">
+            <a href="{% url 'admin_dash:contactmessage_list' %}"
+               class="btn" style="background:#FDBB30; color:#2E2E2E;">
+               Back to List
+            </a>
+            <a href="{% url 'admin_dash:contactmessage_delete' message.pk %}"
+               class="btn" style="background:#8BC0A9; color:#2E2E2E;">
+               Delete
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const messageDetailId = {{ message.id|default:"null" }};
+    if (messageDetailId) {
+        const badge = document.querySelector(".badge.bg-danger");
+        if (badge) {
+            let count = parseInt(badge.innerText);
+            if (count > 0) {
+                badge.innerText = count - 1;
+                if (count - 1 === 0) badge.style.display = "none";
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

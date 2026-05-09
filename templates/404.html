@@ -1,0 +1,49 @@
+{% extends "main.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+
+            <div class="card border-0 shadow-lg rounded-4">
+                <div class="card-header text-center"
+                     style="background:#2E2E2E;color:#FFFFFF;">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Page Not Found
+                    </h4>
+                </div>
+
+                <div class="card-body text-center p-4">
+
+                    <i class="bi bi-search"
+                       style="font-size:4rem;color:#FDBB30;"></i>
+
+                    <h5 class="mt-3 fw-bold">This page doesn’t exist</h5>
+
+                    <p class="mt-2">
+                        The page you are trying to access may have been removed
+                        or you may not have the correct access.
+                    </p>
+
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        <a href="javascript:history.back()"
+                           class="btn"
+                           style="background:#8BC0A9;color:#2E2E2E;">
+                            Go Back
+                        </a>
+
+                        <a href="{% url 'admin_dash:home' %}"
+                           class="btn"
+                           style="background:#D71920;color:#FFFFFF;">
+                            Dashboard
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

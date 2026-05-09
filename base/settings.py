@@ -23,9 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-19%6t$r+cdmxgp+ul%ax2n3uasle+)zx$zafs+ll8_+zf9l(zh'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost',  '172.20.10.9']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '172.20.10.9', 'skiliteent.pythonanywhere.com']
+
 
 
 
@@ -39,7 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'django.contrib.humanize',  
+    'django.contrib.humanize',
 
     'digital_id',
     'admin_dash',
@@ -48,7 +49,11 @@ INSTALLED_APPS = [
     'password_reset',
     "widget_tweaks",
     'payments',
-  
+    'momo_payments',
+    "sms_broadcast",
+    "print_id",
+    "nfc_cards",
+
 ]
 
 MIDDLEWARE = [
@@ -76,8 +81,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 # Your notifications context processor
-                'digital_id.context_processors.notifications',
-                'digital_id.context_processors.pending_requests_count',
+                'digital_id.context_processors.navbar_counts',
             ],
         },
     },
@@ -150,17 +154,25 @@ LOGIN_URL = "/login/"                  # or 'login' if using reverse
 LOGOUT_REDIRECT_URL = "/login/"        # page to go after logout
 LOGIN_REDIRECT_URL = "/officer/officer-dash/"
 
+import os
 
 PAYSTACK_SECRET_KEY = "sk_test_4a95174577feab5cb5651c96a51e5dfaf8291e31"
 PAYSTACK_PUBLIC_KEY = "pk_test_67a38a57361436c62a7b74e2c7c3826efb5ca838"
-SITE_URL = "172.20.10.9:8080"
+BASE_SITE_URL = os.environ.get("BASE_SITE_URL","127.0.0.1:8000")
+SITE_URL = BASE_SITE_URL
 
 from decouple import config
 
 ARKESEL_API_KEY = config("ARKESEL_API_KEY")
 OTP_EXPIRY = config('OTP_EXPIRY', default=300, cast=int)
 
-import os
+
+# MTN MoMo sandbox configuration
+MTN_MOMO_ENV = "sandbox"
+MTN_MOMO_USER_ID = "9912f750a9d84a0585b9b62c5603f6fb"        # API User UUID
+MTN_MOMO_PRIMARY_KEY = "658b8a16cc2b4b1eb4051e59529a167a"   # API Key (ApiSecret)
+MTN_MOMO_SUBSCRIPTION_KEY = "9912f750a9d84a0585b9b62c5603f6fb"  # Subscription Key (Primary Key)
+
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'

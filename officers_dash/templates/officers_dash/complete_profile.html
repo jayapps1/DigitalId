@@ -1,4 +1,7 @@
 {% extends "main.html" %}
+{% block title%}
+    CompleteProfile
+{% endblock title%}
 {% load static %}
 {% load widget_tweaks %}
 
@@ -76,14 +79,14 @@
 
                             <!-- PHONE -->
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Phone</label>
+                                <label class="form-label fw-semibold">Emergency Contact</label>
                                 <div class="input-group">
                                     <span class="input-group-text">
                                         <img src="{% static 'digital_id/ghana_flag.png' %}" style="width:24px;">
                                     </span>
-                                    {{ user_form.phone|add_class:"form-control" }}
+                                    {{ user_form.emergency_contact|add_class:"form-control" }}
                                 </div>
-                                {% for error in user_form.phone.errors %}
+                                {% for error in user_form.emergency_contact.errors %}
                                     <div class="text-danger small">{{ error }}</div>
                                 {% endfor %}
                             </div>

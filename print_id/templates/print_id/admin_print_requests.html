@@ -1,0 +1,54 @@
+{% extends "main.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <h3 class="mb-4" style="color:#FDBB30;">All Approved Print Requests</h3>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark" style="background-color:#2E2E2E; color:#FFFFFF;">
+                <tr>
+                    <th>Officer</th>
+                    <th>Requested By</th>
+                    <th>Approved At</th>
+                    <th>Status</th>
+                    <th>Printed?</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr>
+                    <td>{{ req.officer.user.get_full_name }}</td>
+                    <td>{{ req.requested_by.get_full_name }}</td>
+                    <td>{{ req.approved_at|date:"d M Y H:i" }}</td>
+                    <td>{{ req.get_status_display }}</td>
+                    <td>
+                        {% if req.is_printed %}
+                            <span class="fw-bold" style="color:#8BC0A9;">Yes</span>
+                        {% else %}
+                            <span style="color:#D71920;">No</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if req.status == "APPROVED" and not req.is_printed %}
+                            <a href="{% url 'print_id:print_officer_card' req.id %}"
+                               class="btn btn-sm"
+                               style="background-color:#D71920; color:#FFFFFF;">
+                               Print
+                            </a>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center">No print requests found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,21 +1,51 @@
 from datetime import timedelta
 from django.utils import timezone
 from digital_id.models import OfficerProfile
+from dateutil.relativedelta import relativedelta
+import logging
 
-def activate_qr(profile, days=365, approved_by=None):
+logger = logging.getLogger(__name__)
+
+def activate_qr(profile, days=None, approved_by=None):
     """
     Activates an officer QR without regenerating token.
-    Sets expiry according to the specified number of days.
+    Overrides expiry to 5 years by default.
+    Can still accept 'days' if you explicitly want a different duration.
     """
+    now = timezone.now()
+
     profile.is_active_qr = True
-    profile.qr_expiry_date = timezone.now() + timedelta(days=days)
-    profile.date_approved = timezone.now()
+    profile.date_approved = now
+
+    # Override expiry: 5 years from now by default
+    if days is None:
+        profile.qr_expiry_date = now + relativedelta(years=5)
+    else:
+        profile.qr_expiry_date = now + timedelta(days=days)
+
     profile.save(update_fields=[
         "is_active_qr",
-        "qr_expiry_date",
-        "date_approved"
+        "date_approved",
+        "qr_expiry_date"
     ])
+    logger.info(
+        f"QR activated for {profile.user.staffid}, expires on {profile.qr_expiry_date}"
+    )
 
+
+def override_existing_qr_expiry():
+    """
+    For production: updates all existing active QR codes to have 5-year expiry
+    from date_approved if they are currently less than 5 years.
+    """
+    now = timezone.now()
+    profiles = OfficerProfile.objects.filter(is_active_qr=True)
+
+    for profile in profiles:
+        if not profile.qr_expiry_date or profile.qr_expiry_date < profile.date_approved + relativedelta(years=5):
+            profile.qr_expiry_date = profile.date_approved + relativedelta(years=5)
+            profile.save(update_fields=["qr_expiry_date"])
+            logger.info(f"Updated existing QR expiry for {profile.user.staffid} to {profile.qr_expiry_date}")
 
 def deactivate_qr(profile):
     """

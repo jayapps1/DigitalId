@@ -1,0 +1,85 @@
+{% extends "main.html" %}
+{% load widget_tweaks %}
+{% block title %} ContactUs {% endblock title %}
+
+{% block navbar %}
+  {% if request.user.is_staff or request.user.is_superuser %}
+    {% include "admin_dash/admin_navbar.html" %}
+  {% else %}
+    {% include "officers_dash/officer_navbar.html" %}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+
+      <div class="card shadow-lg border-0">
+
+        <!-- Header -->
+        <div class="card-header text-center"
+             style="background-color:#D71920; color:#FFFFFF;">
+          <h4 class="mb-0">
+            <i class="bi bi-envelope-fill me-2"></i>
+            Contact GNFS Administration
+          </h4>
+        </div>
+
+        <!-- Body -->
+        <div class="card-body"
+             style="background-color:#FFFFFF; color:#2E2E2E;">
+
+          <!-- Officer Info -->
+          <div class="mb-4 p-3 rounded"
+               style="background-color:#8BC0A9;">
+            <p class="mb-1"><strong>Staff ID:</strong> {{ request.user.staffid }}</p>
+            <p class="mb-1"><strong>Phone:</strong> {{ request.user.phone }}</p>
+            <p class="mb-0"><strong>Station:</strong> {{ request.user.profile.station }}</p>
+          </div>
+
+          <!-- Contact Form -->
+          <form method="post" enctype="multipart/form-data"> <!-- Added enctype for file upload -->
+            {% csrf_token %}
+
+            <!-- Subject -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                Subject
+              </label>
+              {{ form.subject|add_class:"form-control" }}
+            </div>
+
+            <!-- Message -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                Your Message
+              </label>
+              {{ form.message|add_class:"form-control"|attr:"rows:4" }}
+            </div>
+
+            <!-- Image Upload -->
+            <div class="mb-3">
+              <label class="form-label fw-semibold">
+                Attach Image
+              </label>
+              {{ form.image|add_class:"form-control" }}
+            </div>
+
+            <div class="d-grid">
+              <button type="submit"
+                      class="btn fw-semibold text-dark"
+                      style="background-color:#FDBB30;">
+                <i class="bi bi-send-fill me-1"></i>
+                Send Message
+              </button>
+            </div>
+          </form>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

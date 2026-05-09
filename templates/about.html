@@ -1,0 +1,159 @@
+{% extends "main.html" %}
+{% block title%}
+    AboutUs
+{% endblock title%}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<style>
+/* -----------------------------------
+   GNFS COLOR VARIABLES
+----------------------------------- */
+:root {
+  --fire-red: #D71920;
+  --safety-gold: #FDBB30;
+  --soft-mint: #8BC0A9;
+  --light-blue: #A7D8DE;
+  --charcoal: #2E2E2E;
+  --white: #FFFFFF;
+}
+
+/* -----------------------------------
+   ANIMATIONS
+----------------------------------- */
+.fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeUp 0.8s ease forwards;
+}
+
+.fade-up.delay-1 { animation-delay: 0.2s; }
+.fade-up.delay-2 { animation-delay: 0.4s; }
+.fade-up.delay-3 { animation-delay: 0.6s; }
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* -----------------------------------
+   FEATURE CARD HOVER
+----------------------------------- */
+.feature-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+}
+</style>
+
+<!-- -----------------------------------
+     ABOUT DIGITAL ID (OFFICERS ONLY)
+----------------------------------- -->
+<section class="py-5" style="background-color: var(--soft-mint); color: var(--charcoal);">
+  <div class="container text-center">
+
+    <!-- HEADER -->
+    <h1 class="display-5 fw-bold fade-up" style="color: var(--fire-red);">
+      About Digital ID
+    </h1>
+
+    <p class="lead mx-auto mt-3 fade-up delay-1" style="max-width: 760px;">
+      Digital ID is an internal, secure identity management and verification platform
+      designed exclusively for authorized officers and administrators.
+      It ensures accountability, data integrity, and trusted identity operations
+      across all participating units.
+    </p>
+
+    <!-- FEATURES -->
+    <div class="row g-4 mt-5">
+
+      <div class="col-md-4 fade-up delay-1">
+        <div class="card feature-card h-100 border-0 text-center">
+          <div class="card-body">
+            <i class="bi bi-shield-lock-fill fs-1 mb-3" style="color: var(--fire-red);"></i>
+            <h5 class="fw-semibold">High-Security Architecture</h5>
+            <p class="text-muted">
+              Built with strong encryption, access control, and audit trails
+              to protect sensitive officer and identity records.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 fade-up delay-2">
+        <div class="card feature-card h-100 border-0 text-center">
+          <div class="card-body">
+            <i class="bi bi-person-badge-fill fs-1 mb-3" style="color: var(--safety-gold);"></i>
+            <h5 class="fw-semibold">Controlled Officer Registration</h5>
+            <p class="text-muted">
+              Officers cannot self-register. All registrations and imports
+              are handled by Station Administrators to maintain system trust.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4 fade-up delay-3">
+        <div class="card feature-card h-100 border-0 text-center">
+          <div class="card-body">
+            <i class="bi bi-diagram-3-fill fs-1 mb-3" style="color: var(--fire-red);"></i>
+            <h5 class="fw-semibold">Centralized Identity Management</h5>
+            <p class="text-muted">
+              Enables administrators to manage officers, verify credentials,
+              approve requests, and monitor activities from one platform.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ADDITIONAL FEATURES -->
+    <div class="row g-4 mt-4">
+
+      <div class="col-md-6 fade-up delay-2">
+        <div class="card feature-card h-100 border-0">
+          <div class="card-body">
+            <h5 class="fw-semibold">Real-Time Notifications</h5>
+            <p class="text-muted">
+              Officers and administrators receive instant alerts for approvals,
+              requests, and system events to ensure timely action.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 fade-up delay-3">
+        <div class="card feature-card h-100 border-0">
+          <div class="card-body">
+            <h5 class="fw-semibold">Role-Based Access Control</h5>
+            <p class="text-muted">
+              Access to features is strictly controlled based on user roles,
+              ensuring officers only see what they are authorized to access.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- OFFICER NOTICE -->
+    <div class="mt-5 fade-up delay-3">
+      <p class="fs-5 fw-semibold" style="color: var(--charcoal);">
+        Officer accounts are created and managed by Station Administrators.
+        If you require access or updates, please contact your Station Administrator.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+
+{% endblock %}

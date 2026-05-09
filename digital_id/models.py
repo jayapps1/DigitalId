@@ -15,6 +15,7 @@ from digital_id.qr_service import send_qr_link  # <--- new import
 from django.core.exceptions import ValidationError
 from PIL import Image, ImageDraw, ImageFont
 from django.urls import reverse
+from django.contrib.auth import get_user_model
 
 
 
@@ -47,10 +48,31 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     GENDER_CHOICES = (("M", "Male"), ("F", "Female"))
     ROLE_CHOICES = (
-        ("OFFICER", "Officer"),
-        ("ADMIN", "Admin Officer"),
-        ("SUPERADMIN", "System Super Admin"),
-    )
+    ("OFFICER", "Officer"),
+    ("STATION_ADMIN", "Station Admin"),
+    ("REGIONAL_ADMIN", "Regional Admin"),
+    ("SUPERADMIN", "System Super Admin"),
+)
+
+    REGION_CHOICES = (
+    ("GREATER_ACC", "Greater Accra"),
+    ("ASHANTI", "Ashanti"),
+    ("WESTERN", "Western"),
+    ("EASTERN", "Eastern"),
+    ("NORTHERN", "Northern"),
+    ("UPPER_EAST", "Upper East"),
+    ("UPPER_WEST", "Upper West"),
+    ("VOLTA", "Volta"),
+    ("BONO", "Bono"),
+    ("BONO_EAST", "Bono East"),
+    ("AHAFO", "Ahafo"),
+    ("Oti", "Oti"),
+    ("SAVANNAH", "Savannah"),
+    ("NORTH_EAST", "North East"),
+    ("WESTERN_NORTH", "Western North"),
+    ("CENTRAL", "Central"),
+)
+
 
     staffid = models.CharField(
         max_length=20,
@@ -75,7 +97,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True
     )
 
-    region = models.CharField(max_length=100, blank=True, null= True)
+    region = models.CharField( max_length=20, choices=REGION_CHOICES, blank=True, null=True)
     district = models.CharField(max_length=100, blank=True, null=True)
 
     phone = models.CharField(
@@ -84,6 +106,17 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True,
         null=True
     )
+
+    # In your User model
+    emergency_contact = models.CharField(
+        max_length=15,
+        unique=True,
+        blank=True,
+        null=True,
+        help_text="Emergency contact number shown on ID card"
+    )
+
+
 
     email = models.EmailField(
         max_length=254,
@@ -137,7 +170,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         if upper:
             value = value.upper()
         return value
-    
+
       # -------------------------
     # ROLE HELPERS
     # -------------------------
@@ -156,7 +189,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             "ghcard",
             "region",
             "district",
-            "phone",
+            "emergency_contact",
             "email",
         ]
         # Required profile fields
@@ -183,11 +216,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     # MODEL VALIDATION (FRIENDLY ERRORS)
     # -------------------------
     def clean(self):
-        import re
 
         unique_fields = {
             "service_number": "Service number already exists.",
             "phone": "Phone number already exists.",
+            "emergency_contact": "Emergency Phone number already exists.",
             "ghcard": "Ghana Card number already exists.",
             "email": "Email address already exists.",
         }
@@ -202,15 +235,8 @@ class User(AbstractBaseUser, PermissionsMixin):
                 if qs.exists():
                     raise ValidationError({field: message})
 
-        # -------------------------
-        # Validate service_number format GF######D
-        # -------------------------
-        if self.service_number:
-            service_number = self._safe_str(self.service_number, upper=True)
-            if not re.fullmatch(r'GF\d{6}D', service_number):
-                raise ValidationError({
-                    "service_number": "Service number must be in the exact format GF######D, e.g., GF123456D"
-                })
+
+
 
 
     # -------------------------
@@ -244,6 +270,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             else:
                 self.ghcard = f"GHA-{clean_gh}"
 
+
         # -------------------------
         # Normalize phone → +233XXXXXXXXX
         # -------------------------
@@ -257,18 +284,35 @@ class User(AbstractBaseUser, PermissionsMixin):
                 phone = "+233" + phone
             self.phone = phone
 
+        if self.emergency_contact:
+            emergency_contact = self._safe_str(self.emergency_contact)
+            if emergency_contact.startswith("0"):
+                emergency_contact = "+233" + emergency_contact[1:]
+            elif emergency_contact.startswith("233"):
+                emergency_contact = "+233" + emergency_contact[3:]
+            elif not emergency_contact.startswith("+233"):
+                emergency_contact = "+233" + emergency_contact
+            self.emergency_contact = emergency_contact
+
+
         # -------------------------
         # Normalize and validate service number
         # -------------------------
         if self.service_number:
-            self.service_number = self._safe_str(self.service_number, upper=True)
-
-            # Exact format GF######D
             import re
-            if not re.fullmatch(r'GF\d{6}D', self.service_number):
+            service_number = self._safe_str(self.service_number, upper=True)
+
+            pattern = r'^(GF\d{5,6}[A-Z]|\d{7,8}[A-Z])$'
+
+            if not re.fullmatch(pattern, service_number):
                 raise ValidationError({
-                    "service_number": "Service number must be in the exact format GF######D, e.g., GF123456D"
+                    "service_number": (
+                        "Service number must be:\n"
+                        "- 7–8 digits followed by a letter (e.g., 2025500J)\n"
+                        "- OR start with GF, followed by 5–6 digits and a letter (e.g., GF200058D)"
+                    )
                 })
+
 
         # -------------------------
         # Run validations (SAFE)
@@ -286,17 +330,29 @@ class User(AbstractBaseUser, PermissionsMixin):
             )
 
 
-# -------------------------
-# OFFICER PROFILE
-# -------------------------
+
+
+from .constants import FIRE_STATION_CHOICES  # <-- import the tuple
+
+import time
+
+
+
+
+from django.db import models
+
+from django.utils import timezone
+
+
+
 class OfficerProfile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="profile"
     )
-    sms_sent = models.BooleanField(default=False)
 
+    sms_sent = models.BooleanField(default=False)
     photo = models.ImageField(upload_to="officers/photos/", blank=True, null=True)
 
     rank = models.CharField(
@@ -306,28 +362,20 @@ class OfficerProfile(models.Model):
     )
 
     BLOOD_GROUP_CHOICES = (
-        ("A+", "A+"),
-        ("A-", "A-"),
-        ("B+", "B+"),
-        ("B-", "B-"),
-        ("AB+", "AB+"),
-        ("AB-", "AB-"),
-        ("O+", "O+"),
-        ("O-", "O-"),
+        ("A Positive", "A Positive"),
+        ("A Negetive", "A Negetive"),
+        ("B Positive", "B Positive"),
+        ("B Negetive", "B Negetive"),
+        ("AB Positive", "AB Positive"),
+        ("AB Negetive", "AB Negetive"),
+        ("O Positive", "O Positive"),
+        ("O Negetive", "O Negetive"),
     )
 
-    blood_group = models.CharField(
-        max_length=3,
-        choices=BLOOD_GROUP_CHOICES,
-        blank=True,
-        null=True
-    )
+    blood_group = models.CharField(max_length=12, choices=BLOOD_GROUP_CHOICES, blank=True, null=True)
+    station = models.CharField(max_length=255, choices=FIRE_STATION_CHOICES, blank=True, null=True)
 
-    station = models.CharField(max_length=150, blank=True)
-
-    # -------------------------
-    # LEAVE STATUS
-    # -------------------------
+    # Leave
     LEAVE_CHOICES = (
         ("AT_POST", "At Post"),
         ("ON_LEAVE", "On Leave"),
@@ -337,55 +385,32 @@ class OfficerProfile(models.Model):
         ("TERMINAL_LEAVE", "Terminal Leave"),
     )
 
-    leave_type = models.CharField(
-        max_length=20,
-        choices=LEAVE_CHOICES,
-        default="AT_POST"
-    )
+    leave_type = models.CharField(max_length=20, choices=LEAVE_CHOICES, default="AT_POST")
     leave_start = models.DateField(blank=True, null=True)
     leave_end = models.DateField(blank=True, null=True)
     called_off = models.BooleanField(default=False)
 
-    # -------------------------
-    # QR / IDENTITY
-    # -------------------------
-    qr_token = models.CharField(
-        max_length=12,
-        unique=True,
-        editable=False
-    )
+    # Identity
+    qr_token = models.CharField(max_length=12, unique=True, editable=False)
 
-    qr_image = models.ImageField(
-        upload_to="officers/qrcodes/",
-        blank=True,
-        null=True
-    )
-
-    service_id_image = models.ImageField(
-        upload_to="officers/service_ids/",
-        blank=True,
-        null=True
-    )
+    qr_image = models.ImageField(upload_to="officers/qrcodes/", blank=True, null=True)
+    front_qr_image = models.ImageField(upload_to="officers/front_qrcodes/", blank=True, null=True)
+    service_id_image = models.ImageField(upload_to="officers/service_ids/", blank=True, null=True)
 
     is_active_qr = models.BooleanField(default=False)
     qr_expiry_date = models.DateTimeField(null=True, blank=True)
     date_approved = models.DateTimeField(null=True, blank=True)
 
-    # -------------------------
-    # STATE FLAGS (ADDED)
-    # -------------------------
     lost_request_pending = models.BooleanField(default=False)
     qr_revoked = models.BooleanField(default=False)
 
-        # -------------------------
-    # SAVE LOGIC (SAFE)
-    # -------------------------
+    # =========================
+    # SAVE (FIXED)
+    # =========================
     def save(self, *args, **kwargs):
         today = timezone.localdate()
 
-        # -------------------------
-        # Leave status normalization
-        # -------------------------
+        # Leave logic
         if self.called_off:
             self.leave_type = "AT_POST"
         elif self.leave_start and self.leave_end and self.leave_start <= today <= self.leave_end:
@@ -393,58 +418,41 @@ class OfficerProfile(models.Model):
         else:
             self.leave_type = "AT_POST"
 
-        # -------------------------
-        # Ensure QR token exists
-        # -------------------------
+        # Token
         if not self.qr_token:
             self.qr_token = uuid.uuid4().hex[:12].upper()
 
-        # -------------------------
-        # Safe defaults for rank and station
-        # -------------------------
-        if not getattr(self, "rank", None):
-            self.rank = "NCO"  # Default Non-Commissioned Officer
-        if not getattr(self, "station", None):
-            self.station = ""
-
-        # -------------------------
-        # Ensure linked user exists
-        # -------------------------
-        if not hasattr(self, "user") or not self.user:
+        if not self.user:
             raise ValidationError("OfficerProfile must be linked to a User.")
 
-        # -------------------------
-        # Save safely
-        # -------------------------
         creating = self.pk is None
-        try:
-            super().save(*args, **kwargs)
-        except IntegrityError:
-            raise ValidationError(
-                "Duplicate data detected. One or more unique fields already exist in OfficerProfile."
-            )
 
-        # -------------------------
-        # Generate QR and Service ID assets if missing
-        # -------------------------
-        if creating or not self.qr_image or not self.service_id_image:
+        # FIRST SAVE
+        super().save(*args, **kwargs)
+
+        # =========================
+        # SYNC NFC CARD
+        # =========================
+        from nfc_cards.models import NFCCard
+
+        card, _ = NFCCard.objects.get_or_create(profile=self)
+
+        if card.qr_token != self.qr_token:
+            card.qr_token = self.qr_token
+            card.save()
+
+        # =========================
+        # GENERATE ASSETS (SAFE)
+        # =========================
+        if creating or not self.qr_image or not self.front_qr_image:
             self._generate_assets()
 
+            # FINAL SAVE (commit images)
+            super().save()
 
-    # -------------------------
-    # ASSET GENERATION
-    # -------------------------
-    def _generate_assets(self):
-        if not self.qr_image:
-            self._generate_qr_image()
-        if not self.service_id_image:
-            self._generate_service_id_image()
-
-        super().save(update_fields=["qr_image", "service_id_image"])
-
-    # -------------------------
-    # QR VALIDITY CHECK
-    # -------------------------
+    # =========================
+    # QR VALIDITY
+    # =========================
     def is_qr_valid(self):
         if not self.is_active_qr:
             return False
@@ -455,60 +463,72 @@ class OfficerProfile(models.Model):
         if self.qr_expiry_date and timezone.now() > self.qr_expiry_date:
             return False
         return True
-   
+
+    # =========================
+    # GENERATE ALL ASSETS
+    # =========================
+    def _generate_assets(self):
+        self._generate_qr_image()        # BACK → verify
+        self._generate_front_qr_image()  # FRONT → vCard
+        self._generate_service_id_image()
+
+    # =========================
+    # FRONT QR (FIXED)
+    # =========================
+    def _generate_front_qr_image(self):
+        nfc_path = reverse("nfc_cards:nfc_vcard", args=[self.qr_token])
+        nfc_url = f"{settings.SITE_URL}{nfc_path}"
+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_H,
+            box_size=3,
+            border=2,
+        )
+        qr.add_data(nfc_url)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+
+        buffer = BytesIO()
+        img.save(buffer, format="PNG")
+
+        self.front_qr_image.save(
+            f"front_qr_{self.user.staffid}.png",
+            ContentFile(buffer.getvalue()),
+            save=False,
+        )
+
+    # =========================
+    # BACK QR (VERIFY)
+    # =========================
     def _generate_qr_image(self):
-
-        protocol = "https" if not settings.DEBUG else "http"
-
-        # 🔹 Use the QR token to point to verify page
         verify_path = reverse("id_card:verify", args=[self.qr_token])
-        verify_url = f"{protocol}://{settings.SITE_URL}{verify_path}"
+        verify_url = f"{settings.SITE_URL}{verify_path}"
 
         qr = qrcode.QRCode(
             version=4,
             error_correction=qrcode.constants.ERROR_CORRECT_H,
-            box_size=20,
-            border=4,
+            box_size=8,
+            border=1,
         )
         qr.add_data(verify_url)
         qr.make(fit=True)
+
         img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
 
-        # Optional: embed logo
-        width, height = img.size
-        draw = ImageDraw.Draw(img)
-        logo_path = os.path.join(settings.BASE_DIR, "digital_id/static/digital_id/gnfslogo.png")
-        if os.path.exists(logo_path):
-            logo = Image.open(logo_path).convert("RGBA")
-            logo_size = width // 4
-            logo = logo.resize((logo_size, logo_size), Image.LANCZOS)
-            img.paste(logo, ((width - logo_size) // 2, (height - logo_size) // 2), logo)
-
-        # Optional: draw surname
-        try:
-            font = ImageFont.truetype("arialbd.ttf", 26)
-        except IOError:
-            font = ImageFont.load_default()
-        surname = (self.user.lastname or "").upper()
-        if surname:
-            bbox = draw.textbbox((0, 0), surname, font=font)
-            text_w = bbox[2] - bbox[0]
-            text_h = bbox[3] - bbox[1]
-            draw.text(((width - text_w) // 2, 4), surname, fill=(0,0,0), font=font)
-
-        # Save QR
         buffer = BytesIO()
         img.save(buffer, format="PNG")
+
         self.qr_image.save(
             f"qr_{self.user.staffid}.png",
             ContentFile(buffer.getvalue()),
             save=False,
         )
 
-
-    # -------------------------
-    # SERVICE ID CARD GENERATION
-    # -------------------------
+    # =========================
+    # SERVICE ID
+    # =========================
     def _generate_service_id_image(self):
         template_path = os.path.join(
             settings.BASE_DIR,
@@ -520,7 +540,6 @@ class OfficerProfile(models.Model):
 
         card = Image.open(template_path).convert("RGBA")
         card_w, card_h = card.size
-        draw = ImageDraw.Draw(card)
 
         if self.photo and os.path.exists(self.photo.path):
             photo = Image.open(self.photo.path).convert("RGBA")
@@ -529,8 +548,11 @@ class OfficerProfile(models.Model):
 
         buffer = BytesIO()
         card.save(buffer, format="PNG")
+
+        filename = f"service_id_{self.user.staffid}_{int(time.time())}.png"
+
         self.service_id_image.save(
-            f"service_id_{self.user.staffid}.png",
+            filename,
             ContentFile(buffer.getvalue()),
             save=False,
         )
@@ -551,6 +573,33 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user.staffid} - {self.title}"
+
+
+
+
+
+class ContactMessage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    # system-controlled snapshots
+    staffid = models.CharField(max_length=50)
+    phone = models.CharField(max_length=20)
+    station = models.CharField(max_length=150)
+    role = models.CharField(max_length=50, default="OFFICER")
+
+    # user-entered
+    subject = models.CharField(max_length=150, default="General Inquiry")
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+
+    # NEW: image upload
+    image = models.ImageField(upload_to='contact_messages/', null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.staffid} | {self.role} | {self.subject}"
+
 
 
 # -------------------------

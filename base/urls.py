@@ -10,8 +10,14 @@ urlpatterns = [
     path('officer/', include(('officers_dash.urls', 'officers_dash'), namespace='officers_dash')),
     path("password-reset/", include("password_reset.urls", namespace="password_reset")),
     path("payments/", include("payments.urls", namespace="payments_sys")),
+    path("momo_payments/", include("momo_payments.urls", namespace="momo_pay")),
  # officer dashboard
     path('id-card/', include('id_card.urls')),       # QR / ID card
+    path('sms/', include('sms_broadcast.urls', namespace='sms_broadcast')),
+    path('print-id/', include(('print_id.urls', 'print_id'), namespace='print_id')),
+        # NFC Cards
+    path('nfc/', include(('nfc_cards.urls', 'nfc_cards'), namespace='nfc_cards')),
+
 ]
 
 if settings.DEBUG:

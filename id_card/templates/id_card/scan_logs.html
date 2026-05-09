@@ -1,0 +1,76 @@
+{% extends "main.html" %}
+{% block title%}
+    ScanLogs
+{% endblock title%}
+{% block content %}
+
+<div class="container my-4">
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header text-white"
+             style="background:#D71920;">
+            <h5 class="mb-0">
+                <i class="bi bi-qr-code-scan"></i>
+                QR Scan Logs
+            </h5>
+        </div>
+
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle">
+                <thead style="background:#FDBB30;">
+                    <tr class="text-dark">
+                        <th>#</th>
+                        <th>Officer</th>
+                        <th>Staff ID</th>
+                        <th>IP Address</th>
+                        <th>Date & Time</th>
+                        <th>Location</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for log in scan_logs %}
+                    <tr style="background:#FFFFFF;">
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            {{ log.profile.user.firstname }}
+                            {{ log.profile.user.lastname }}
+                        </td>
+                        <td>{{ log.profile.user.staffid }}</td>
+                        <td class="text-muted">{{ log.ip_address }}</td>
+                        <td>{{ log.scanned_at|date:"d M Y, H:i" }}</td>
+                        <td>
+                            {% if log.latitude and log.longitude %}
+                                <span class="badge"
+                                      style="background:#8BC0A9;">
+                                    GPS Available
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    IP Only
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'id_card:scan_detail' log.id %}"
+                               class="btn btn-sm text-white"
+                               style="background:#D71920;">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            No scan logs available.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

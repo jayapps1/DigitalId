@@ -1,4 +1,7 @@
 {% extends "main.html" %}
+{% block title%}
+    RegisterOfficer
+{% endblock title%}
 {% load static %}
 {% load widget_tweaks %}
 
@@ -30,10 +33,13 @@
               <div class="mb-3" id="field-{{ field.name }}">
                 {{ field.label_tag }}
 
-                {% if field.name == "role" %}
+                {% if field.name == "role" or field.name == "region" %}
                   {{ field|add_class:"form-select" }}
-                {% elif field.name == "is_staff" or field.name == "is_superuser" %}
-                  {# We'll render checkboxes manually below #}
+                {% elif field.name == "station" %}
+                  {{ field|add_class:"form-select select2 text-uppercase" }}
+                  <small class="d-block mt-1 text-warning">Type or select station</small>
+                {% elif field.name in "is_staff is_superuser" %}
+                  {# Staff and Superuser checkboxes are handled separately #}
                 {% else %}
                   {{ field|add_class:"form-control"|attr:"placeholder:Enter " }}
                 {% endif %}
@@ -88,6 +94,11 @@
   </div>
 </div>
 
+{# Include jQuery and Select2 #}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const roleField = document.getElementById("id_role");
@@ -99,18 +110,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const role = roleField.value.toLowerCase();
 
     if (role.includes("admin") && !role.includes("super")) {
-      // Admin Officer → only is_staff
       if (isStaffDiv) isStaffDiv.style.display = "block";
       if (isSuperuserDiv) {
         isSuperuserDiv.style.display = "none";
         isSuperuserDiv.querySelector("input").checked = false;
       }
     } else if (role.includes("super")) {
-      // System Super Admin → show both
       if (isStaffDiv) isStaffDiv.style.display = "block";
       if (isSuperuserDiv) isSuperuserDiv.style.display = "block";
     } else {
-      // Officer → hide both
       if (isStaffDiv) {
         isStaffDiv.style.display = "none";
         isStaffDiv.querySelector("input").checked = false;
@@ -126,6 +134,14 @@ document.addEventListener('DOMContentLoaded', function() {
     roleField.addEventListener("change", toggleAdminCheckboxes);
     toggleAdminCheckboxes();
   }
+
+  // Initialize Select2 for station search
+  $('.select2').select2({
+    placeholder: "Type or select a station",
+    allowClear: true,
+    width: '100%'
+  });
 });
 </script>
+
 {% endblock %}

@@ -1,0 +1,36 @@
+{% extends "main.html" %}
+{% block content %}
+<div class="container py-5">
+    <h3>Broadcast #{{ broadcast.id }} Status</h3>
+    <p>Message: {{ broadcast.message }}</p>
+    <p>Total Recipients: {{ broadcast.total_recipients }}</p>
+    <p>Sent: {{ broadcast.sent_count }} | Failed: {{ broadcast.failed_count }} | Delivered: {{ broadcast.delivered_count }}</p>
+
+    <table class="table table-striped mt-4">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Recipient</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Response</th>
+                <th>Sent At</th>
+                <th>Delivered At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for delivery in deliveries %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ delivery.user.get_full_name }}</td>
+                <td>{{ delivery.phone_number }}</td>
+                <td>{{ delivery.status }}</td>
+                <td>{{ delivery.response_message }}</td>
+                <td>{{ delivery.sent_at }}</td>
+                <td>{{ delivery.delivered_at }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -6,7 +6,8 @@ from django.utils.html import format_html
 import logging
 from django.urls import path, reverse
 from django.shortcuts import redirect, get_object_or_404
-from digital_id.models import IDRequest, IDRequestApproval
+from digital_id.models import IDRequest, IDRequestApproval,  ContactMessage
+
 
 logger = logging.getLogger(__name__)
 
@@ -394,6 +395,24 @@ class IDRequestApprovalAdmin(admin.ModelAdmin):
                 approval.approved_by = request.user
                 approval.date_processed = timezone.now()
                 approval.save(update_fields=["status", "approved_by", "date_processed"])
+
+
+
+
+# =========================
+# CONTACT US
+# =========================
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = (
+        'staffid', 'role', 'subject', 'station', 'created_at'
+    )
+    list_filter = ('role', 'station', 'created_at')
+    search_fields = ('staffid', 'subject', 'message')
+    readonly_fields = (
+        'user', 'staffid', 'phone', 'station', 'role', 'created_at'
+    )
 
 
 

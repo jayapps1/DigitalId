@@ -1,4 +1,7 @@
 {% extends "main.html" %}
+{% block title%}
+    ImportOfficer
+{% endblock title%}
 {% load static %}
 
 {% block content %}
@@ -13,7 +16,7 @@
 
                 <div class="card-body" style="background-color:#FFFFFF; color:#2E2E2E;">
                     <p class="text-muted small">
-                        Upload an Excel (.xlsx) file containing officer information. Default password is 
+                        Upload an Excel (.xlsx) file containing officer information. Default password is
                         '<strong>Officer@123</strong>' if none provided. Officers will be required to change their password at first login.
                     </p>
 
@@ -31,7 +34,7 @@
                     <form id="importForm" method="post" enctype="multipart/form-data" novalidate>
                         {% csrf_token %}
                         <input type="file" name="excel_file" accept=".xlsx" required class="form-control mb-3">
-                        <button type="submit" class="btn btn-lg fw-bold w-100" 
+                        <button type="submit" class="btn btn-lg fw-bold w-100"
                                 style="background-color:#D71920; color:#FFFFFF; border:none;">
                             Import Officers
                         </button>
@@ -41,7 +44,7 @@
                     <div id="loading" class="mt-3" style="display:none;">
                         <p class="fw-bold text-center">Importing officers... Please wait.</p>
                         <div class="progress">
-                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
                                  role="progressbar" style="width: 100%;"></div>
                         </div>
                     </div>

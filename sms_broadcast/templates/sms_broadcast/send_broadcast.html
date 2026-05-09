@@ -1,0 +1,156 @@
+{% extends "main.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+
+      <!-- Bootstrap Card -->
+      <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-header text-center" style="background-color:#D71920; color:#FFFFFF;">
+          <h4 class="mb-0">Send SMS Broadcast</h4>
+        </div>
+        <div class="card-body p-4">
+
+          {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                  {{ message }}
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              {% endfor %}
+          {% endif %}
+
+          <form method="POST" class="needs-validation" novalidate>
+            {% csrf_token %}
+
+            <!-- Message -->
+            <div class="mb-3">
+              <label for="message" class="form-label" style="font-weight:500;">Message</label>
+              <textarea name="message" id="message" class="form-control" rows="4" placeholder="Type your message here..." required></textarea>
+            </div>
+
+            <!-- Scope -->
+            <div class="mb-3">
+              <label for="scope" class="form-label" style="font-weight:500;">Scope</label>
+              <select name="scope" id="scope" class="form-select" required {% if role != 'SUPERADMIN' %}disabled{% endif %}>
+                {% if role == 'SUPERADMIN' %}
+                  <option value="" disabled selected>Select scope</option>
+                  <option value="ALL">All</option>
+                  <option value="REGION">Region</option>
+                  <option value="STATION">Station</option>
+                {% elif role == 'REGIONAL_ADMIN' %}
+                  <option value="REGION" selected>Region</option>
+                {% else %}
+                  <option value="STATION" selected>Station</option>
+                {% endif %}
+              </select>
+            </div>
+
+            <!-- Applicable Fields -->
+            <div id="applicable-fields">
+
+              {% if role == 'SUPERADMIN' %}
+                <!-- Region dropdown shown only if scope = REGION -->
+                <div class="mb-3" id="region-field" style="display:none;">
+                  <label for="region" class="form-label" style="font-weight:500;">Region</label>
+                  <select name="region" id="region" class="form-select">
+                    <option value="" selected disabled>Select Region</option>
+                    {% for value, label in regions %}
+                      <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <!-- Station dropdown shown only if scope = STATION -->
+                <div class="mb-3" id="station-field" style="display:none;">
+                  <label for="station" class="form-label" style="font-weight:500;">Station</label>
+                  <select name="station" id="station" class="form-select">
+                    <option value="" selected disabled>Select Station</option>
+                    {% for value, label in stations %}
+                      <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+              {% elif role == 'REGIONAL_ADMIN' %}
+                <div class="mb-3">
+                  <label class="form-label" style="font-weight:500;">Region</label>
+                  <input type="text" class="form-control" value="{{ user.region }}" readonly>
+                  <input type="hidden" name="region" value="{{ user.region }}">
+                </div>
+
+              {% elif role == 'STATION_ADMIN' %}
+                <div class="mb-3">
+                  <label class="form-label" style="font-weight:500;">Station</label>
+                  <input type="text" class="form-control" value="{{ user.profile.station }}" readonly>
+                  <input type="hidden" name="station" value="{{ user.profile.station }}">
+                </div>
+              {% endif %}
+
+            </div>
+
+            <!-- Submit -->
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn" style="background-color:#FDBB30; color:#2E2E2E; font-weight:500;">
+                Send Broadcast
+              </button>
+            </div>
+
+          </form>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Bootstrap form validation
+ {% if role == 'SUPERADMIN' %}
+$(document).ready(function() {
+
+    const scopeSelect = document.getElementById('scope');
+    const regionField = document.getElementById('region-field');
+    const stationField = document.getElementById('station-field');
+
+    function toggleApplicableFields() {
+        if(scopeSelect.value === 'REGION'){
+            regionField.style.display = 'block';
+            stationField.style.display = 'none';
+        } else if(scopeSelect.value === 'STATION'){
+            regionField.style.display = 'none';
+            stationField.style.display = 'block';
+
+            // Initialize Select2 on station every time it becomes visible
+            $('#station').select2({
+                placeholder: "Select Station",
+                allowClear: true,
+                width: '100%'
+            });
+
+        } else { // ALL
+            regionField.style.display = 'none';
+            stationField.style.display = 'none';
+        }
+    }
+
+    scopeSelect.addEventListener('change', toggleApplicableFields);
+    toggleApplicableFields(); // run on page load
+
+    // Also initialize region Select2 if you want it searchable
+    $('#region').select2({
+        placeholder: "Select Region",
+        allowClear: true,
+        width: '100%'
+    });
+
+});
+{% endif %}
+
+
+</script>
+
+{% endblock %}

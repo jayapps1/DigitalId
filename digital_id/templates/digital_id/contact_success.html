@@ -1,0 +1,33 @@
+{% extends "main.html" %}
+{% block title%}
+    ContactSuccess
+{% endblock title%}
+{% block content %}
+<div class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+
+      <div class="card shadow border-0">
+        <div class="card-header text-center"
+             style="background:#D71920; color:#FFFFFF;">
+          <h4>Message Sent</h4>
+        </div>
+
+        <div class="card-body text-center"
+             style="background:#FFFFFF;">
+          <p class="fw-semibold text-success">
+            Your message has been successfully delivered to GNFS Administration.
+          </p>
+
+          <a href="{% url 'digital_id:contact_success' %}"
+             class="btn mt-3"
+             style="background:#FDBB30;">
+            Send Another Message
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
